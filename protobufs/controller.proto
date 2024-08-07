@@ -42,21 +42,21 @@ message Empty {
 
 }
 
-message SuggestedAsset{
+enum SuggestedAsset{
 
-    ACTOR = 0
-    SERVER = 1
-    DATASTORE = 2
-    LAMBDA = 3
-    PROCESS = 4
-    EXTERNAL_ENTITY = 5
+    ACTOR = 0;
+    SERVER = 1;
+    DATASTORE = 2;
+    LAMBDA = 3;
+    PROCESS = 4;
+    EXTERNAL_ENTITY = 5;
 
 }
 
 message Event {
     //Event_Type event_type = 1;
-    SuggestedAsset event_element = 1
-    bool changed = 2
+    SuggestedAsset event_element = 1;
+    bool changed = 2;
 }
 
 message Threat {

@@ -1,11 +1,10 @@
 from django.urls import path
+from django.contrib import admin
 
 from . import views
 
 urlpatterns = [
-    path("", views.test, name="test"),
-    path("dfd_view/", views.upload_file, name="upload_file"),
-    path("asset_view/", views.asset_viewer, name="asset_view"),
+    path("tmnt/", views.workspace, name="workspace"),
     path("api/add_actor", views.add_actor, name="api/add_actor"),
     path("api/add_boundary", views.add_boundary, name="api/add_boundary"),
     path(
@@ -14,4 +13,5 @@ urlpatterns = [
         name="api/add_externalasset",
     ),
     path("api/add_datastore", views.add_datastore, name="api/add_datastore"),
+    path("admin/", admin.site.urls),
 ]

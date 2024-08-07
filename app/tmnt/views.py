@@ -102,7 +102,7 @@ def upload_file(request):
     return render(request, "tmnt/dfd_viewer.html", {"fileform": fileform})
 
 
-def asset_viewer(request):
+def workspace(request):
     return render(request, "tmnt/asset_viewer.html")
 
 
