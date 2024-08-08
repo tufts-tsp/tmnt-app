@@ -1,11 +1,8 @@
 from django.shortcuts import render
-from .forms import UploadDFDFileForm
-from .scripts.img_test import *
-import io
+from django.http import JsonResponse, HttpResponse
+from contextlib import closing
+import socket
 import os
-import subprocess
-from django.http import JsonResponse
-
 import grpc
 from controller_pb2 import (
     Machine,
@@ -32,79 +29,25 @@ from controller_pb2 import (
 )
 from controller_pb2_grpc import ControllerStub
 
-controller_host = os.getenv("CONTROLLER_HOST", "localhost")
-controller_channel = grpc.insecure_channel(f"{controller_host}:50051")
-controller_client = ControllerStub(controller_channel)
+def check_controller_status(host, port):
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
+        res = sock.connect_ex((host, port))
+    if res == 0:
+        return True
+    return False
 
-
-# base editor view
-def test(request):
-    # generate() # generate random color cat picture
-    return render(request, "tmnt/test.html")
-
-
-# view for uploading file
-def upload_file(request):
-    # checks to see if request method is POST which means form is submitted
-    if request.method == "POST":
-        # request.POST has form data, request.FILE has file data
-        fileform = UploadDFDFileForm(request.POST, request.FILES)
-
-        # first, check that the user actually submitted something
-        if fileform.is_valid():
-            tm_file = None
-
-            # if yes...
-            # did they submit a file?
-            if "inputFile" in request.FILES.keys():
-                # then get the file
-                print("DEBUG >>>> using FILE")
-                tm_file = request.FILES["inputFile"].file
-
-            # # or did they submit via the textbox?
-            else:
-                # then get the text and treat it like a file
-                print("DEBUG >>>> using TEXT")
-                tm_file = io.BytesIO(
-                    (request.POST["inputText"])
-                    .replace("\r", "")
-                    .encode("ascii")
-                )
-
-            # now save whatever they gave us to our own local file...
-            DIR = os.path.dirname(__file__)
-            with open(os.path.join(DIR, "scripts", "tm.py"), "wb") as f:
-                f.write(tm_file.read())
-
-            # ...and run pytm on it to generate a threat model image
-            # run /mnt/c/Users/miraj/Desktop/study/capstone/ntmt_github/pytm_web/scripts/tm.py --dfd | dot -Tpng -o sample.png
-            ps = subprocess.Popen(
-                (os.path.join(DIR, "scripts", "tm.py"), "--dfd"),
-                stdout=subprocess.PIPE,
-            )
-            _ = subprocess.check_output(
-                ("dot", "-Tpng", "-o", os.path.join(DIR, "static", "out.png")),
-                stdin=ps.stdout,
-            )
-
-            # os.remove(os.path.join(DIR, 'static', 'out.png'))
-
-            # then render the new page
-            return render(
-                request, "tmnt/dfd_viewer.html", {"fileform": fileform}
-            )
-
-    else:
-        # if request method is not POST, make an empty form
-        fileform = UploadDFDFileForm()
-        # renders template upload.html, passing in the form
-        # NEED TO IMPLEMENT upload.html TEMPLATE
-    return render(request, "tmnt/dfd_viewer.html", {"fileform": fileform})
+cntl_host = os.getenv("CONTROLLER_HOST", "localhost")
+cntl_port = os.getenv("CONTROLLER_PORT", 5001)
+cntl_channel = grpc.insecure_channel(f"{cntl_host}:{cntl_port}")
+cntl_client = ControllerStub(cntl_channel)
+cntl_status = check_controller_status(cntl_host, cntl_port)
 
 
 def workspace(request):
     return render(request, "tmnt/asset_viewer.html")
 
+def api_not_running_view(request):
+    return JsonResponse("Empty View", safe=False)
 
 def add_actor(request):
     actor_name = request.POST.get("actor_name")
@@ -115,13 +58,15 @@ def add_actor(request):
     print(actor_name)
     print(actor_type)
     print(actor_access)
-    actor = Actor(
-        name=actor_name, actor_type=actor_type, physical_access=actor_access
-    )
 
-    response_status = controller_client.AddActor(actor)
+    if cntl_status:
+        actor = Actor(
+            name=actor_name, actor_type=actor_type, physical_access=actor_access
+        )
+        response_status = cntl_client.AddActor(actor)
 
-    return JsonResponse(response_status.code, safe=False)
+        return JsonResponse(response_status.code, safe=False)
+    return JsonResponse(503, safe=False)
 
 
 def add_boundary(request):
@@ -134,11 +79,12 @@ def add_boundary(request):
         name=actor_name, actor_type=actor_type, physical_access=actor_access
     )
     boundary_name = request.POST.get("boundary_name")
-    boundary = Boundary(name=boundary_name, boundary_owner=actor)
 
-    response_status = controller_client.AddBoundary(boundary)
-
-    return JsonResponse(response_status.code, safe=False)
+    if cntl_status:
+        boundary = Boundary(name=boundary_name, boundary_owner=actor)
+        response_status = cntl_client.AddBoundary(boundary)
+        return JsonResponse(response_status.code, safe=False)
+    return JsonResponse(503, safe=False)
 
 
 def add_datastore(request):
@@ -169,17 +115,18 @@ def add_datastore(request):
     datastore_type = request.POST.get("ds_type")
 
     trust_boundaries = [boundary]
-    datastore_request = AddDatastoreRequest(
-        name=boundary_name,
-        open_port=open_ports,
-        trust_boundary=trust_boundaries,
-        machine=machine,
-        ds_type=datastore_type,
-    )
 
-    response_status = controller_client.AddDatastore(datastore_request)
-
-    return JsonResponse(response_status.code, safe=False)
+    if cntl_status:
+        datastore_request = AddDatastoreRequest(
+            name=boundary_name,
+            open_port=open_ports,
+            trust_boundary=trust_boundaries,
+            machine=machine,
+            ds_type=datastore_type,
+        )
+        response_status = cntl_client.AddDatastore(datastore_request)
+        return JsonResponse(response_status.code, safe=False)
+    return JsonResponse(503, safe=False)
 
 
 def add_externalasset(request):
@@ -214,15 +161,17 @@ def add_externalasset(request):
 
     trust_boundaries = [boundary]
 
-    addexternalasset_request = AddExternalAssetRequest(
-        name=name,
-        open_port=open_ports,
-        trust_boundary=trust_boundaries,
-        machine=machine,
-        physical_access=physical_access,
-    )
-    response_status = controller_client.AddExternalAsset(
-        addexternalasset_request
-    )
+    if cntl_status:
+        addexternalasset_request = AddExternalAssetRequest(
+            name=name,
+            open_port=open_ports,
+            trust_boundary=trust_boundaries,
+            machine=machine,
+            physical_access=physical_access,
+        )
+        response_status = cntl_client.AddExternalAsset(
+            addexternalasset_request
+        )
 
-    return JsonResponse(response_status.code, safe=False)
+        return JsonResponse(response_status.code, safe=False)
+    return JsonResponse(503, safe=False)
