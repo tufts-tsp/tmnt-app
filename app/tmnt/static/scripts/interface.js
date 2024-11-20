@@ -521,18 +521,18 @@ function addElement(asset_type) {
             form.innerHTML = "<span style=\"font-weight:bold\">" + asset_name + "</span><br><span>What are the associated open ports? (include comma separated list)</span><br><input id=\"o_port\" type=\"text\" value=\"22,53\"><br><span>What is the associated machine's type?</span><br><input id=\"machine_type\" type=\"text\" value=\"Physical\"><br><span>Is there physical access to the asset?</span><br><select id=\"physical_access\"><option value=\"No\">No</option><option value=\"Yes\">Yes</option></select><br><button id=\"form_done\">Done</button>";
 
             document.getElementById("form_done").onclick = function () {
-                var extern_boundaries = [];
+                // var extern_boundaries = [];
                 $.ajax({
                     type: "POST",
                     url: addExternalAssetUrl,
                     data: {
-                        boundary_names: extern_boundaries,
+                        trust_boundaries: [],
                         name: asset_name,
-                        open_ports: document.getElementById("o_port").value,
+                        open_port: document.getElementById("o_port").value,
                         machine: document.getElementById("machine_type").value,
                         physical_access: document.getElementById("physical_access").value,
                     },
-                    data_type: "html",
+                    data_type: "json",
                     
                     success: function(result){
                         alert("Success");

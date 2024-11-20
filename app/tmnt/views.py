@@ -184,21 +184,12 @@ def add_datastore(request):
 
 def add_externalasset(request):
     name = request.POST.get("name")
-    open_ports_str = request.POST.get("open_ports").split(",")
+    open_ports_str = request.POST.get("open_port").split(",")
     open_ports = []
     for port in open_ports_str:
         open_ports.append(int(port))
-
-    actor_name = request.POST.get("actor_name")
-    actor_type = request.POST.get("actor_type")
-    actor_access = True
-    if request.POST.get("actor_access") == "No":
-        actor_access = False
-    actor = Actor(
-        name=actor_name, actor_type=actor_type, physical_access=actor_access
-    )
-    boundary_name = request.POST.get("boundary_name")
-    boundary = Boundary(name=boundary_name, boundary_owner=actor)
+    
+    trust_boundaries = request.POST.get("trust_boundaries")
     machine_type = request.POST.get("machine_type")
     machine = Machine.PHYSICAL
     if machine_type == "Virtual":
@@ -212,15 +203,18 @@ def add_externalasset(request):
     if request.POST.get("physical_access") == "No":
         physical_access = False
 
-    trust_boundaries = [boundary]
+
 
     addexternalasset_request = AddExternalAssetRequest(
         name=name,
         open_port=open_ports,
-        trust_boundary=trust_boundaries,
+        trust_boundaries=trust_boundaries,
         machine=machine,
         physical_access=physical_access,
     )
+    # dataflows from the actor to any other asset -- ask if the actor has physical access 
+    # get rid of physical access attribute for all assets
+    # actor to another actor -- ask twice for both 
     response_status = controller_client.AddExternalAsset(
         addexternalasset_request
     )
