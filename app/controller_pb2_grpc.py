@@ -139,6 +139,36 @@ class ControllerStub(object):
                 request_serializer=controller__pb2.Empty.SerializeToString,
                 response_deserializer=controller__pb2.GetActorsResponses.FromString,
                 _registered_method=True)
+        self.AddServer = channel.unary_unary(
+                '/Controller/AddServer',
+                request_serializer=controller__pb2.AddServerRequest.SerializeToString,
+                response_deserializer=controller__pb2.Status.FromString,
+                _registered_method=True)
+        self.RemoveServer = channel.unary_unary(
+                '/Controller/RemoveServer',
+                request_serializer=controller__pb2.RemoveServerRequest.SerializeToString,
+                response_deserializer=controller__pb2.Status.FromString,
+                _registered_method=True)
+        self.GetServers = channel.unary_unary(
+                '/Controller/GetServers',
+                request_serializer=controller__pb2.Empty.SerializeToString,
+                response_deserializer=controller__pb2.GetServerResponses.FromString,
+                _registered_method=True)
+        self.AddLambda = channel.unary_unary(
+                '/Controller/AddLambda',
+                request_serializer=controller__pb2.AddLambdaRequest.SerializeToString,
+                response_deserializer=controller__pb2.Status.FromString,
+                _registered_method=True)
+        self.RemoveLambda = channel.unary_unary(
+                '/Controller/RemoveLambda',
+                request_serializer=controller__pb2.RemoveLambdaRequest.SerializeToString,
+                response_deserializer=controller__pb2.Status.FromString,
+                _registered_method=True)
+        self.GetLambdas = channel.unary_unary(
+                '/Controller/GetLambdas',
+                request_serializer=controller__pb2.Empty.SerializeToString,
+                response_deserializer=controller__pb2.GetLambdaResponses.FromString,
+                _registered_method=True)
         self.GetSuggestions = channel.unary_unary(
                 '/Controller/GetSuggestions',
                 request_serializer=controller__pb2.Event.SerializeToString,
@@ -269,6 +299,42 @@ class ControllerServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def AddServer(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def RemoveServer(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetServers(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def AddLambda(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def RemoveLambda(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetLambdas(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def GetSuggestions(self, request, context):
         """rpc NewEvent (Event) returns (Status);
 
@@ -379,6 +445,36 @@ def add_ControllerServicer_to_server(servicer, server):
                     servicer.GetActors,
                     request_deserializer=controller__pb2.Empty.FromString,
                     response_serializer=controller__pb2.GetActorsResponses.SerializeToString,
+            ),
+            'AddServer': grpc.unary_unary_rpc_method_handler(
+                    servicer.AddServer,
+                    request_deserializer=controller__pb2.AddServerRequest.FromString,
+                    response_serializer=controller__pb2.Status.SerializeToString,
+            ),
+            'RemoveServer': grpc.unary_unary_rpc_method_handler(
+                    servicer.RemoveServer,
+                    request_deserializer=controller__pb2.RemoveServerRequest.FromString,
+                    response_serializer=controller__pb2.Status.SerializeToString,
+            ),
+            'GetServers': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetServers,
+                    request_deserializer=controller__pb2.Empty.FromString,
+                    response_serializer=controller__pb2.GetServerResponses.SerializeToString,
+            ),
+            'AddLambda': grpc.unary_unary_rpc_method_handler(
+                    servicer.AddLambda,
+                    request_deserializer=controller__pb2.AddLambdaRequest.FromString,
+                    response_serializer=controller__pb2.Status.SerializeToString,
+            ),
+            'RemoveLambda': grpc.unary_unary_rpc_method_handler(
+                    servicer.RemoveLambda,
+                    request_deserializer=controller__pb2.RemoveLambdaRequest.FromString,
+                    response_serializer=controller__pb2.Status.SerializeToString,
+            ),
+            'GetLambdas': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetLambdas,
+                    request_deserializer=controller__pb2.Empty.FromString,
+                    response_serializer=controller__pb2.GetLambdaResponses.SerializeToString,
             ),
             'GetSuggestions': grpc.unary_unary_rpc_method_handler(
                     servicer.GetSuggestions,
@@ -926,6 +1022,168 @@ class Controller(object):
             '/Controller/GetActors',
             controller__pb2.Empty.SerializeToString,
             controller__pb2.GetActorsResponses.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def AddServer(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/Controller/AddServer',
+            controller__pb2.AddServerRequest.SerializeToString,
+            controller__pb2.Status.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RemoveServer(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/Controller/RemoveServer',
+            controller__pb2.RemoveServerRequest.SerializeToString,
+            controller__pb2.Status.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetServers(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/Controller/GetServers',
+            controller__pb2.Empty.SerializeToString,
+            controller__pb2.GetServerResponses.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def AddLambda(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/Controller/AddLambda',
+            controller__pb2.AddLambdaRequest.SerializeToString,
+            controller__pb2.Status.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RemoveLambda(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/Controller/RemoveLambda',
+            controller__pb2.RemoveLambdaRequest.SerializeToString,
+            controller__pb2.Status.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetLambdas(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/Controller/GetLambdas',
+            controller__pb2.Empty.SerializeToString,
+            controller__pb2.GetLambdaResponses.FromString,
             options,
             channel_credentials,
             insecure,

@@ -32,8 +32,8 @@ import controller_pb2_grpc
 
 
 from tmnpy.dsl import TM, Actor, Boundary
-from tmnpy.dsl.asset import ExternalEntity, Datastore, Machine, DATASTORE_TYPE
-from tmnpy.engines import Engine, NaturalEngine, EventType
+from tmnpy.dsl.asset import ExternalEntity, Datastore, Process, Server, Lambda, Machine, DATASTORE_TYPE
+from tmnpy.engines import Engine, FocusEngine, EventType
 
 
 class TMNTControllerMeta(type):
@@ -74,7 +74,7 @@ class TMNTController(metaclass=TMNTControllerMeta):
         if config_file != "":
             # parse config and add to `self.tm`
             pass
-        self.natural_engine = NaturalEngine("Focus")
+        self.natural_engine = FocusEngine("Focus")
         self.engines = engines
         self.references = references
 
@@ -88,16 +88,18 @@ class ControllerService(controller_pb2_grpc.ControllerServicer):
 
     def AddExternalAsset(self, request, context):
         # check first to see if the actor or boundary already exist. If no, create a new ones.
-        actor = Actor(
-            request.trust_boundary[0].boundary_owner.name,
-            request.trust_boundary[0].boundary_owner.actor_type,
-            request.trust_boundary[0].boundary_owner.physical_access,
-        )
-        boundary = Boundary(request.trust_boundary[0].name, actor)
+        # actor = Actor(
+        #     request.trust_boundary[0].boundary_owner.name,
+        #     request.trust_boundary[0].boundary_owner.actor_type,
+        #     request.trust_boundary[0].boundary_owner.physical_access,
+        # )
+        # trust_boundaries = request.trust_boundaries
+        # for boundary in request.boundary_names:
+        #     trust_boundaries.append(boundary)
         open_ports = []
-        for port in request.open_port:
+        for port in request.open_ports:
             open_ports.append(port)
-        trust_boundaries = [boundary]
+        # trust_boundaries = [boundary]
 
         machine = Machine.PHYSICAL
         if request.machine == 1:
@@ -109,30 +111,30 @@ class ControllerService(controller_pb2_grpc.ControllerServicer):
 
         asset = ExternalEntity(
             name=request.name,
-            physical_access=request.physical_access,
+            # physical_access=request.physical_access,
             open_ports=open_ports,
-            trust_boundaries=trust_boundaries,
+            # trust_boundaries=trust_boundaries,
             machine=machine,
         )
-        self.controller.tm.add_component(asset)
+        self.controller.tm.components.append(asset)
 
-        self.controller.natural_engine.event(Event_Type.ASSET)
+        # self.controller.natural_engine.event(Event_Type.ASSET)
 
         status = Status(code=Status_Code.SUCCESS)
         return status
 
     def AddDatastore(self, request, context):
         # check first to see if the actor or boundary already exist. If no, create a new ones.
-        actor = Actor(
-            request.trust_boundary[0].boundary_owner.name,
-            request.trust_boundary[0].boundary_owner.actor_type,
-            request.trust_boundary[0].boundary_owner.physical_access,
-        )
-        boundary = Boundary(request.trust_boundary[0].name, actor)
+        # actor = Actor(
+        #     request.trust_boundary[0].boundary_owner.name,
+        #     request.trust_boundary[0].boundary_owner.actor_type,
+        #     # request.trust_boundary[0].boundary_owner.physical_access,
+        # )
+        # boundary = Boundary(request.trust_boundary[0].name, actor)
         open_ports = []
-        for port in request.open_port:
+        for port in request.open_ports:
             open_ports.append(port)
-        trust_boundaries = [boundary]
+        # trust_boundaries = [boundary]
 
         machine = Machine.PHYSICAL
         if request.machine == 1:
@@ -141,6 +143,7 @@ class ControllerService(controller_pb2_grpc.ControllerServicer):
             machine = Machine.CONTAINER
         elif request.machine == 3:
             machine = Machine.SERVERLESS
+
 
         datastore_type = DATASTORE_TYPE.UNKNOWN
         if request.ds_type == 1:
@@ -155,28 +158,61 @@ class ControllerService(controller_pb2_grpc.ControllerServicer):
             datastore_type = DATASTORE_TYPE.OTHER
         elif request.ds_type == 6:
             datastore_type = DATASTORE_TYPE.NOSQL
-
         asset = Datastore(
             name=request.name,
             open_ports=open_ports,
-            trust_boundaries=trust_boundaries,
+            # trust_boundaries=trust_boundaries,
+            # boundaries.element.append -- add boundary request
             machine=machine,
             ds_type=datastore_type,
         )
-        self.controller.tm.add_component(asset)
+        self.controller.tm.components.append(asset)
 
-        self.controller.natural_engine.event(Event_Type.ASSET)
+        # self.controller.natural_engine.event(Event_Type.ASSET)
 
         status = Status(code=Status_Code.SUCCESS)
         return status
 
     def AddActor(self, request, context):
         actor = Actor(
-            request.name, request.actor_type, request.physical_access
+            request.name, request.actor_type
         )
-        self.controller.tm.add_actor(actor)
+        self.controller.tm.actors.append(actor)
 
-        self.controller.natural_engine.event(Event_Type.ASSET)
+        # self.controller.natural_engine.event(Event_Type.ASSET)
+
+        status = Status(code=Status_Code.SUCCESS)
+        return status
+    
+    def AddServer(self, request, context):
+        server = Server(
+            name=request.name
+        )
+        self.controller.tm.components.append(server)
+
+        # self.controller.natural_engine.event(Event_Type.ASSET)
+
+        status = Status(code=Status_Code.SUCCESS)
+        return status
+
+    def AddProcess(self, request, context):
+        process = Process(
+            name=request.name
+        )
+        self.controller.tm.components.append(process)
+
+        # self.controller.natural_engine.event(Event_Type.ASSET)
+
+        status = Status(code=Status_Code.SUCCESS)
+        return status
+    
+    def AddLambda(self, request, context):
+        lambda_instance = Lambda(
+            name=request.name
+        )
+        self.controller.tm.components.append(lambda_instance)
+
+        # self.controller.natural_engine.event(Event_Type.ASSET)
 
         status = Status(code=Status_Code.SUCCESS)
         return status
@@ -185,12 +221,12 @@ class ControllerService(controller_pb2_grpc.ControllerServicer):
         actor = Actor(
             request.trust_boundary.boundary_owner.name,
             request.trust_boundary.boundary_owner.actor_type,
-            request.trust_boundary.boundary_owner.physical_access,
+            # request.trust_boundary.boundary_owner.physical_access,
         )
         boundary = Boundary(request.trust_boundary.name, actor)
         self.controller.tm.add_boundary(boundary)
 
-        self.controller.natural_engine.event(Event_Type.ASSET)
+        # self.controller.natural_engine.event(Event_Type.ASSET)
 
         status = Status(code=Status_Code.SUCCESS)
         return status
@@ -240,7 +276,7 @@ def serve():
     controller_pb2_grpc.add_ControllerServicer_to_server(
         ControllerService(controller), server
     )
-    the_engine = NaturalEngine("Natural Engine")
+    the_engine = FocusEngine("Natural Engine")
     server.add_insecure_port("[::]:50051")
     server.start()
     server.wait_for_termination()

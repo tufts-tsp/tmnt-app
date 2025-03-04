@@ -15,6 +15,8 @@ from controller_pb2 import (
     Status_Code,
     Actor,
     RemoveActorRequest,
+    AddServerRequest,
+    RemoveServerRequest,
     Boundary,
     RemoveBoundaryRequest,
     AddAssetRequest,
@@ -25,6 +27,8 @@ from controller_pb2 import (
     RemoveDatastoreRequest,
     AddProcessRequest,
     RemoveProcessRequest,
+    AddLambdaRequest,
+    RemoveLambdaRequest,
     ExportRequest,
     ImportRequest,
     Event_Type,
@@ -109,17 +113,46 @@ def workspace(request):
 def add_actor(request):
     actor_name = request.POST.get("actor_name")
     actor_type = request.POST.get("actor_type")
-    actor_access = True
-    if request.POST.get("actor_access") == "No":
-        actor_access = False
     print(actor_name)
     print(actor_type)
-    print(actor_access)
     actor = Actor(
-        name=actor_name, actor_type=actor_type, physical_access=actor_access
+        name=actor_name, actor_type=actor_type
     )
 
     response_status = controller_client.AddActor(actor)
+
+    return JsonResponse(response_status.code, safe=False)
+
+def add_server(request):
+    server_name = request.POST.get("name")
+
+    server_request = AddServerRequest(
+        name=server_name
+    )
+
+    response_status = controller_client.AddServer(server_request)
+
+    return JsonResponse(response_status.code, safe=False)
+
+def add_process(request):
+    process_name = request.POST.get("name")
+
+    process_request = AddProcessRequest(
+        name=process_name
+    )
+
+    response_status = controller_client.AddProcess(process_request)
+
+    return JsonResponse(response_status.code, safe=False)
+
+def add_lambda(request):
+    lambda_name = request.POST.get("name")
+
+    lambda_request = AddLambdaRequest(
+        name=lambda_name
+    )
+
+    response_status = controller_client.AddLambda(lambda_request)
 
     return JsonResponse(response_status.code, safe=False)
 
@@ -127,11 +160,8 @@ def add_actor(request):
 def add_boundary(request):
     actor_name = request.POST.get("actor_name")
     actor_type = request.POST.get("actor_type")
-    actor_access = True
-    if request.POST.get("actor_access") == "No":
-        actor_access = False
     actor = Actor(
-        name=actor_name, actor_type=actor_type, physical_access=actor_access
+        name=actor_name, actor_type=actor_type
     )
     boundary_name = request.POST.get("boundary_name")
     boundary = Boundary(name=boundary_name, boundary_owner=actor)
@@ -150,11 +180,8 @@ def add_datastore(request):
 
     actor_name = request.POST.get("actor_name")
     actor_type = request.POST.get("actor_type")
-    actor_access = True
-    if request.POST.get("actor_access") == "No":
-        actor_access = False
     actor = Actor(
-        name=actor_name, actor_type=actor_type, physical_access=actor_access
+        name=actor_name, actor_type=actor_type
     )
     boundary_name = request.POST.get("boundary_name")
     boundary = Boundary(name=boundary_name, boundary_owner=actor)
@@ -171,7 +198,7 @@ def add_datastore(request):
     trust_boundaries = [boundary]
     datastore_request = AddDatastoreRequest(
         name=boundary_name,
-        open_port=open_ports,
+        open_ports=open_ports,
         trust_boundary=trust_boundaries,
         machine=machine,
         ds_type=datastore_type,
@@ -181,7 +208,6 @@ def add_datastore(request):
 
     return JsonResponse(response_status.code, safe=False)
 
-
 def add_externalasset(request):
     name = request.POST.get("name")
     open_ports_str = request.POST.get("open_port").split(",")
@@ -189,7 +215,6 @@ def add_externalasset(request):
     for port in open_ports_str:
         open_ports.append(int(port))
     
-    trust_boundaries = request.POST.get("trust_boundaries")
     machine_type = request.POST.get("machine_type")
     machine = Machine.PHYSICAL
     if machine_type == "Virtual":
@@ -199,22 +224,13 @@ def add_externalasset(request):
     elif machine_type == "Serverless":
         machine = Machine.SERVERLESS
 
-    physical_access = True
-    if request.POST.get("physical_access") == "No":
-        physical_access = False
-
 
 
     addexternalasset_request = AddExternalAssetRequest(
         name=name,
-        open_port=open_ports,
-        trust_boundaries=trust_boundaries,
-        machine=machine,
-        physical_access=physical_access,
+        open_ports=open_ports,
+        machine=machine
     )
-    # dataflows from the actor to any other asset -- ask if the actor has physical access 
-    # get rid of physical access attribute for all assets
-    # actor to another actor -- ask twice for both 
     response_status = controller_client.AddExternalAsset(
         addexternalasset_request
     )

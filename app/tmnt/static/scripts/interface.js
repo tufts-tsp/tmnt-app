@@ -87,7 +87,21 @@ window.onload = function() {
     .attr("d", 'M 0,0 L 20,10 L 0,20 z')
     .attr("fill", "#000");
 
-    // unselects node(s) if you click on canvas
+    // Creates a definition for highlighted arrow, to be used by selected links
+    svg.append("defs")
+    .append("marker")
+    .attr("id", "arrow-highlight")
+    .attr("markerWidth", 20)
+    .attr("markerHeight", 20)
+    .attr("refX", 20 - 1)
+    .attr("refY", 10)
+    .attr("orient", "auto")
+    .attr("markerUnits", "strokeWidth")
+    .append("path")
+    .attr("d", 'M 0,0 L 20,10 L 0,20 z')
+    .attr("fill", "#3E8EDE"); 
+
+    // unselects node(s) and link(s) if you click on canvas
     svg.on("click", function (e) {
         if (e.target.id == "dfd_svg") {
             // Unselect all nodes
@@ -97,6 +111,10 @@ window.onload = function() {
             d3.selectAll(".asset")
                 .style("stroke", "black")
                 .style("stroke-width", "1");
+            d3.selectAll(".link")
+                .style("stroke", "black")
+                .style("stroke-width", "1")
+                .attr("marker-end", "url(#arrow)");
             resetBottomBar();
         }
     })
@@ -327,6 +345,12 @@ function addElement(asset_type) {
     var asset_name = window.prompt("Name this object:", "New " + asset_type);
     if (asset_name == null)
         return;
+    
+    // Prevent duplicate asset names
+    if (nodes.map(a => a.asset_name).includes(asset_name)) {
+        alert("All assets must have unique names!");
+        return;
+    }
 
     // Add new node to nodes array
     let rand_x = area.width/2 + Math.random()*5 - 10;
@@ -431,7 +455,21 @@ function addElement(asset_type) {
             .attr('height', 60)
             .style('fill', 'white')
             .style('stroke', 'black');
+
+            $.ajax({
+                type: "POST",
+                url: addServerUrl,
+                data: {
+                    name: asset_name
+                },
+                data_type: "html",
+                success: function(result){
+                    alert("Success");
+                },
+            });
+
             break;
+            
         case "Data Store":
             let radX = 30;
             let radY = 15;
@@ -502,7 +540,18 @@ function addElement(asset_type) {
             .attr('r', 30)
             .style('fill', 'white')
             .style('stroke', 'black');
-        
+            
+            $.ajax({
+                type: "POST",
+                url: addProcessUrl,
+                data: {
+                    name: asset_name
+                },
+                data_type: "html",
+                success: function(result){
+                    alert("Success");
+                },
+            });
             
             break;
         case "External Entity":
@@ -518,10 +567,9 @@ function addElement(asset_type) {
             
             // Generate popup form to get more asset information
             form.style.display = "block";
-            form.innerHTML = "<span style=\"font-weight:bold\">" + asset_name + "</span><br><span>What are the associated open ports? (include comma separated list)</span><br><input id=\"o_port\" type=\"text\" value=\"22,53\"><br><span>What is the associated machine's type?</span><br><input id=\"machine_type\" type=\"text\" value=\"Physical\"><br><span>Is there physical access to the asset?</span><br><select id=\"physical_access\"><option value=\"No\">No</option><option value=\"Yes\">Yes</option></select><br><button id=\"form_done\">Done</button>";
+            form.innerHTML = "<span style=\"font-weight:bold\">" + asset_name + "</span><br><span>What are the associated open ports? (include comma separated list)</span><br><input id=\"o_port\" type=\"text\" value=\"22,53\"><br><span>What is the associated machine's type?</span><br><input id=\"machine_type\" type=\"text\" value=\"Physical\"><br><button id=\"form_done\">Done</button>";
 
             document.getElementById("form_done").onclick = function () {
-                // var extern_boundaries = [];
                 $.ajax({
                     type: "POST",
                     url: addExternalAssetUrl,
@@ -529,8 +577,7 @@ function addElement(asset_type) {
                         trust_boundaries: [],
                         name: asset_name,
                         open_port: document.getElementById("o_port").value,
-                        machine: document.getElementById("machine_type").value,
-                        physical_access: document.getElementById("physical_access").value,
+                        machine: document.getElementById("machine_type").value
                     },
                     data_type: "json",
                     
@@ -553,6 +600,19 @@ function addElement(asset_type) {
             .style("font-size", '100pt')
             .style('font-family', 'Calibri')
             .text('λ');
+
+            $.ajax({
+                type: "POST",
+                url: addLambdaUrl,
+                data: {
+                    name: asset_name
+                },
+                data_type: "html",
+                success: function(result){
+                    alert("Success");
+                },
+            });
+            
             break;
         default:
             // should never happen
@@ -780,7 +840,6 @@ function clicked(e) {
         assocs[i].onclick = function() {
             resetBottomBar();
             document.getElementById("boundary_dropdown").selectedIndex = Object.keys(boundaries).indexOf(selected_node.boundaries[i]) + 1;
-            console.log("boundary index: " + Object.keys(boundaries).indexOf(selected_node.boundaries[i]) + 1);
             viewBoundary();
         }
     }
@@ -893,7 +952,6 @@ function deleteBoundary(boundary_name) {
     });
     for (let asset of assets) {
         if (asset.asset_type == "Actor" || asset.asset_type == "External Entity") {
-            console.log("removing actor/extern");
             asset.boundaries.splice(asset.boundaries.indexOf(boundary_name), 1);
         }
     }
@@ -948,12 +1006,10 @@ function associateBoundary(node) {
             assocs[i].onclick = function() {
                 resetBottomBar();
                 document.getElementById("boundary_dropdown").selectedIndex = Object.keys(boundaries).indexOf(node.boundaries[i]) + 1;
-                console.log("boundary index: " + Object.keys(boundaries).indexOf(node.boundaries[i]) + 1);
                 viewBoundary();
             }
         }
         associateBoundary(node);
-        console.log("assets length: " + assets.length);
 
         svg.selectAll(".link_group").filter(d => (d.source == node && assets.includes(d.target)) || (d.target == node && assets.includes(d.source))).selectAll(".boundary").filter(function() { return d3.select(this).attr("boundaryName") == boundary_name; }).remove();
         var flow = d3.selectAll(".link_group").filter(d => (assets.includes(d.source) && !assets.includes(d.target)) || (assets.includes(d.target) && !assets.includes(d.source)));
@@ -1343,7 +1399,28 @@ function createAssetOptions() {
         }
     }
     listItem.appendChild(new_dataflow);
-    listItem.appendChild(createDataflowList(assetID));
+    listItem.appendChild(newDataflowList(assetID));
+    options.appendChild(listItem);
+
+    // creating the button to view workflows connected to current asset
+    listItem = document.createElement('li');
+    listItem.id = "view_dataflows";
+    var view_dataflows = document.createElement('a');
+    view_dataflows.href = "#";
+    view_dataflows.innerHTML = "View dataflow...";
+    view_dataflows.onclick = function() {
+        var has_dataflows = false;
+        for (let dataflow of links) {
+            if (dataflow.source == currNode || dataflow.target == currNode) {
+                has_dataflows = true;
+            }
+        }
+        if (!has_dataflows) {
+            alert("There are no dataflows with this asset!");
+        }
+    }
+    listItem.appendChild(view_dataflows);
+    listItem.appendChild(createDataflowList(currNode));
     options.appendChild(listItem);
 
     // creating the button to view workflows connected to current asset
@@ -1769,7 +1846,7 @@ function createAssetOptions() {
 
 // Helper function to create/update list of possible new dataflows in   
 // options dropdown menu
-function createDataflowList(assetID) {
+function newDataflowList(assetID) {
     var dataflow_list = document.createElement('ul');
     dataflow_list.id = "dataflow_button";
     for (let node of nodes) {
@@ -1790,6 +1867,103 @@ function createDataflowList(assetID) {
         dataflow_list.appendChild(node_li);
     }
     return dataflow_list;
+}
+
+// Helper function to create/update list of dataflows to view in options 
+// dropdown menu
+function createDataflowList(currNode) {
+    var dataflows = [];
+    for (let dataflow of links) {
+        if (dataflow.source == currNode || dataflow.target == currNode) {
+            dataflows.push(dataflow);
+        }
+    }
+    var dataflow_list = document.createElement('ul');
+    dataflow_list.id = "dataflow_button";
+    for (let dataflow of dataflows) {
+        var node_li = document.createElement('li');
+        var node_a = document.createElement('a');
+        node_a.href = "#";
+        node_a.innerHTML = dataflow.name;
+        if (dataflow.name == "") {
+            if (dataflow.source == currNode) {
+                node_a.innerHTML = "to " + dataflow.target.asset_name;
+            }
+            else {
+                node_a.innerHTML = "from " + dataflow.source.asset_name;
+            }
+        }
+        node_a.onclick = function() {
+            resetBottomBar();
+            viewDataflow(dataflow);
+        }
+        node_li.appendChild(node_a);
+        dataflow_list.appendChild(node_li);
+    }
+    return dataflow_list;
+}
+
+function viewDataflow(dataflow) {
+    // Reset all links to default
+    d3.selectAll(".link")
+        .style("stroke", "black")
+        .attr("marker-end", "url(#arrow)");
+
+    // Find and highlight the specific dataflow being viewed
+    d3.selectAll(".link")
+        .filter(d => d.source === dataflow.source && d.target === dataflow.target)
+        .style("stroke", "#3E8EDE")
+        .attr("marker-end", "url(#arrow-highlight)");
+
+    var dataflow_name = dataflow.name;
+    if (dataflow.name == "") {
+        dataflow_name = "[Unnamed]";
+    }
+    // Updates bottom bar to display dataflow information
+    let bottom_bar_html = "<h2>"+ dataflow_name +"</h2> <h3 style=\"font-weight:normal\">";
+    bottom_bar_html += "<span style=\"cursor: pointer\" id=\"source\">" + dataflow.source.asset_name + "</span> &#8594 <span style=\"cursor: pointer\" id=\"target\">" + dataflow.target.asset_name + "</span></h3>";
+    if (dataflow.protocol) {
+        bottom_bar_html += "<br><h3>Protocol</h3><span>" + dataflow.protocol + "</span><br>";
+    }
+    bottom_bar_html += "<br><button type=\"button\" class=\"view_button\" id=\"edit_button\">Rename</button>";
+    bottom_bar_html += "<br> <button type=\"button\" class=\"view_button\" id=\"unselect_button\">Unselect Dataflow</button>";
+    bottom_bar_html += "<br> <button type=\"button\" class=\"view_button\" id=\"remove_dataflow\">Remove Dataflow</button>";
+    document.getElementById("bottom_bar").innerHTML = bottom_bar_html;
+    document.getElementById("edit_button").onclick = function () {
+        dataflow.name = window.prompt("Rename this dataflow to:", dataflow.name);
+        viewDataflow(dataflow);
+    };
+    var unselect_button = document.getElementById("unselect_button");
+    unselect_button.onclick = function () {
+        // Reset all links to default
+        d3.selectAll(".link")
+            .style("stroke", "black")
+            .attr("marker-end", "url(#arrow)");
+        resetBottomBar();
+    }
+    var remove_button = document.getElementById("remove_dataflow");
+    remove_button.onclick = function () {
+        if (!confirm("This will delete all workflows that include the selected dataflow. Continue?")) {
+            return;
+        }
+        // Removes all workflows that involve this dataflow
+        for (let key of Object.keys(workflows)) {
+            var components = workflows[key];
+            if (components.includes(dataflow.source) && components.indexOf(dataflow.source) == components.indexOf(dataflow.target) - 1) {
+                delete workflows[key];
+            }
+        }
+        // Remove dataflow
+        links.splice(links.indexOf(dataflow), 1);
+        var link_update = svg.selectAll(".link_group").data(links, function(d) { return d.source.id + "-" + d.target.id; });
+        link_update.exit().remove();
+
+        // Reset all links to default
+        d3.selectAll(".link")
+            .style("stroke", "black")
+            .attr("marker-end", "url(#arrow)");
+        resetBottomBar();
+    }
 }
 
 // Helper function to create/update list of workflows to view in options 
@@ -2173,11 +2347,19 @@ function addDataFlow() {
 
     // Define the link that d3 will use to apply forces...
     let link = {
+        "name": dataflow_name,
         "source": nodes[source],
         "target": nodes[target],
-        "type": "Test -->",
-        "distance": 30
+        // "authentication": None,
+        // "multifactor_authentication": None,
+        "distance": 30n
     }
+
+    if (nodes[source].asset_type == "Actor" || nodes[target].asset_type == "Actor") {
+        var protocol = window.prompt("What is the protocol?", "Not Specified");
+        link.protocol = protocol;
+    }
+
     // ...and append it to our array of links
     links.push(link);
 
@@ -2198,6 +2380,19 @@ function addDataFlow() {
         .attr("stroke", "black")
         .attr("marker-end", "url(#arrow)")
         .attr("markerWidth", 300)
+        .on("click", function(event, d) {
+            // Reset all links to default state
+            d3.selectAll(".link")
+                .style("stroke", "black")
+                .style("stroke-width", "1")
+                .attr("marker-end", "url(#arrow)");
+
+            // Highlight only the clicked link
+            d3.select(this)
+                .style("stroke", "#3E8EDE")
+                .attr("marker-end", "url(#arrow-highlight)");
+            viewDataflow(link);
+        })
 
     // ...as well as a name, if one was given
     if (dataflow_name != null) {
@@ -2210,8 +2405,22 @@ function addDataFlow() {
             .attr("text-anchor", "middle")
             .attr("alignment-baseline", "central")
             .attr("fill", "black")
+            .attr("marker-end", "url(#arrow)")
             .style("font-size", "16pt")
-            .text(dataflow_name);
+            .text(dataflow_name)
+            .on("click", function(event, d) {
+                // Reset all links to default state
+                d3.selectAll(".link")
+                    .style("stroke", "black")
+                    .style("stroke-width", "1")
+                    .attr("marker-end", "url(#arrow)");
+
+                // Highlight only the clicked link
+                d3.select(this)
+                    .style("stroke", "#3E8EDE")
+                    .attr("marker-end", "url(#arrow-highlight)");
+                viewDataflow(link);
+        });
     }
 
     // Check if this new dataflow is an inter-trust boundary flow
@@ -2727,11 +2936,9 @@ function viewBoundary() {
             }
         });
         for (let actor of actors) {
-            console.log("removing actor");
             actor.boundaries.splice(actor.boundaries.indexOf(selectedBoundary), 1);
         }
         for (let extern of externs) {
-            console.log("removing extern");
             extern.boundaries.splice(extern.boundaries.indexOf(selectedBoundary), 1);
         }
         delete boundaries[selectedBoundary];
@@ -2862,7 +3069,6 @@ function editBoundary(selectedBoundary) {
             var flow = d3.selectAll(".link_group").filter(d => (d.source == removed && assets.includes(d.target)) || (d.target == removed && assets.includes(d.source)));
             boundaries[selectedBoundary] = assets;
             if (removed.asset_type == "Actor" || removed.asset_type == "External Entity") {
-                console.log("removing actor/extern");
                 removed.boundaries.splice(removed.boundaries.indexOf(selectedBoundary), 1);
             }
             
@@ -2992,7 +3198,6 @@ function createTrustBoundary() {
 
     for (let assoc of assocs) {
         assoc.boundaries.push(boundary_name);
-        console.log("adding boundary to actor/extern");
     }
 
     cancelAddingBoundary();

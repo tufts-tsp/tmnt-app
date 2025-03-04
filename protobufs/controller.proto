@@ -72,7 +72,6 @@ message GetSuggestionsResponse {
 message Actor {
     string name = 1;
     string actor_type = 2;
-    bool physical_access = 3;
 }
 
 message GetActorsResponses {
@@ -98,7 +97,7 @@ message GetBoundariesResponses {
 
 message AddAssetRequest {
     string name = 1;
-    repeated int32 open_port = 2;
+    repeated int32 open_ports = 2;
     repeated Boundary trust_boundary = 3;
     Machine machine = 4;
 }
@@ -109,7 +108,7 @@ message RemoveAssetRequest {
 
 message AssetResponse {
     string name = 1;
-    repeated int32 open_port = 2;
+    repeated int32 open_ports = 2;
     repeated Boundary trust_boundary = 3;
     Machine machine = 4;
 }
@@ -120,10 +119,9 @@ message GetAssetsResponses {
 
 message AddExternalAssetRequest {
     string name = 1;
-    repeated int32 open_port = 2;
-    repeated Boundary trust_boundary = 3;
+    repeated int32 open_ports = 2;
+    repeated string trust_boundaries = 3;
     Machine machine = 4;
-    bool physical_access = 5;
 }
 
 message RemoveExternalAssetRequest {
@@ -132,10 +130,9 @@ message RemoveExternalAssetRequest {
 
 message ExternalAssetResponse {
     string name = 1;
-    repeated int32 open_port = 2;
+    repeated int32 open_ports = 2;
     repeated Boundary trust_boundary = 3;
     Machine machine = 4;
-    bool physical_access = 5;
 }
 
 message GetExternalAssetsResponses {
@@ -144,7 +141,7 @@ message GetExternalAssetsResponses {
 
 message AddDatastoreRequest {
     string name = 1;
-    repeated int32 open_port = 2;
+    repeated int32 open_ports = 2;
     repeated Boundary trust_boundary = 3;
     Machine machine = 4;
     Datastore_Type ds_type = 5;
@@ -156,7 +153,7 @@ message RemoveDatastoreRequest {
 
 message DatastoreResponse {
     string name = 1;
-    repeated int32 open_port = 2;
+    repeated int32 open_ports = 2;
     repeated Boundary trust_boundary = 3;
     Machine machine = 4;
     Datastore_Type ds_type = 5;
@@ -168,7 +165,7 @@ message GetDatastoreResponses {
 
 message AddProcessRequest {
     string name = 1;
-    repeated int32 open_port = 2;
+    repeated int32 open_ports = 2;
     repeated Boundary trust_boundary = 3;
     Machine machine = 4;
 }
@@ -179,13 +176,55 @@ message RemoveProcessRequest {
 
 message ProcessResponse {
     string name = 1;
-    repeated int32 open_port = 2;
+    repeated int32 open_ports = 2;
     repeated Boundary trust_boundary = 3;
     Machine machine = 4;
 }
 
 message GetProcessResponses {
     repeated ProcessResponse process = 1;
+}
+
+message AddLambdaRequest {
+    string name = 1;
+    repeated int32 open_ports = 2;
+    repeated Boundary trust_boundary = 3;
+    Machine machine = 4;
+}
+
+message RemoveLambdaRequest {
+    string name = 1;
+}
+
+message LambdaResponse {
+    string name = 1;
+    repeated int32 open_ports = 2;
+    repeated Boundary trust_boundary = 3;
+    Machine machine = 4;
+}
+
+message GetLambdaResponses {
+    repeated LambdaResponse lambda = 1;
+}
+
+message Server {
+    string name = 1;
+}
+
+message AddServerRequest {
+    string name = 1;
+}
+
+message RemoveServerRequest {
+    string name = 1;
+}
+
+message ServerResponse {
+    string name = 1;
+}
+
+message GetServerResponses {
+    repeated ServerResponse server = 1;
 }
 
 message ExportRequest {
@@ -224,6 +263,14 @@ service Controller {
     rpc AddActor (Actor) returns (Status);
     rpc RemoveActor (RemoveActorRequest) returns (Status);
     rpc GetActors (Empty) returns (GetActorsResponses);
+
+    rpc AddServer (AddServerRequest) returns (Status);
+    rpc RemoveServer (RemoveServerRequest) returns (Status);
+    rpc GetServers (Empty) returns (GetServerResponses);
+
+    rpc AddLambda (AddLambdaRequest) returns (Status);
+    rpc RemoveLambda (RemoveLambdaRequest) returns (Status);
+    rpc GetLambdas (Empty) returns (GetLambdaResponses);
 
     //rpc NewEvent (Event) returns (Status);
 
