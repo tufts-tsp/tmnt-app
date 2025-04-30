@@ -95,6 +95,11 @@
                 <div style="display:none">Select assets on the right to add to a new trust boundary</div>
                 <button type="button" class="add_button" onclick="addingTrustBoundary()" disabled>Start Adding Assets</button>
             </div>
+            <h3>(Testing buttons)</h3>
+            <div id="clear">
+                <button type="button" class="add_button" onclick="loadDfd()">Load Previous DFD</button>
+                <button type="button" class="add_button" onclick="clearDfd()">Clear DFD</button>
+            </div>
 
         </div>
 
@@ -288,6 +293,10 @@
     var addDatastoreUrl = "{% url 'api/add_datastore' %}";
     var addExternalAssetUrl = "{% url 'api/add_externalasset' %}";
     var addBoundary = "{% url 'api/add_boundary' %}";
+    var deleteAssetUrl = "{% url 'api/delete_asset' %}";
+    var deleteAllAssetsUrl = "{%  url 'api/delete_all_assets' %}";
+    var addDataFlowUrl = "{% url 'api/add_dataflow' %}";
+    var loadDfdUrl = "{% url 'api/load_dfd' %}";
 </script>
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 <script type="text/javascript" src="{% static 'scripts/interface.js' %}"></script>

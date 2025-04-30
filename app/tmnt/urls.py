@@ -12,5 +12,9 @@ urlpatterns = [
     path("api/add_boundary", views.add_boundary, name="api/add_boundary"),
     path("api/add_externalasset", views.add_externalasset, name="api/add_externalasset"),
     path("api/add_datastore", views.add_datastore, name="api/add_datastore"),
+    path("api/delete_asset", views.delete_asset, name="api/delete_asset"),
+    path("api/delete_all_assets", views.delete_all_assets, name="api/delete_all_assets"),
+    path("api/add_dataflow", views.add_dataflow, name="api/add_dataflow"),
+    path("api/load_dfd", views.load_dfd, name="api/load_dfd"),
     path("admin/", admin.site.urls),
 ]

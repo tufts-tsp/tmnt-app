@@ -1,39 +1,40 @@
 from django.shortcuts import render
 from .forms import UploadDFDFileForm
 from .scripts.img_test import *
+from .models import *
 import io
 import os
 import subprocess
 from django.http import JsonResponse
 
 import grpc
-from controller_pb2 import (
-    Machine,
-    Datastore_Type,
-    Empty,
-    Status,
-    Status_Code,
-    Actor,
-    RemoveActorRequest,
-    AddServerRequest,
-    RemoveServerRequest,
-    Boundary,
-    RemoveBoundaryRequest,
-    AddAssetRequest,
-    RemoveAssetRequest,
-    AddExternalAssetRequest,
-    RemoveExternalAssetRequest,
-    AddDatastoreRequest,
-    RemoveDatastoreRequest,
-    AddProcessRequest,
-    RemoveProcessRequest,
-    AddLambdaRequest,
-    RemoveLambdaRequest,
-    ExportRequest,
-    ImportRequest,
-    Event_Type,
-    Event,
-)
+# from controller_pb2 import (
+#     Machine,
+#     Datastore_Type,
+#     Empty,
+#     Status,
+#     Status_Code,
+#     Actor,
+#     RemoveActorRequest,
+#     AddServerRequest,
+#     RemoveServerRequest,
+#     Boundary,
+#     RemoveBoundaryRequest,
+#     AddAssetRequest,
+#     RemoveAssetRequest,
+#     AddExternalAssetRequest,
+#     RemoveExternalAssetRequest,
+#     AddDatastoreRequest,
+#     RemoveDatastoreRequest,
+#     AddProcessRequest,
+#     RemoveProcessRequest,
+#     AddLambdaRequest,
+#     RemoveLambdaRequest,
+#     ExportRequest,
+#     ImportRequest,
+#     Event_Type,
+#     Event,
+# )
 from controller_pb2_grpc import ControllerStub
 
 controller_host = os.getenv("CONTROLLER_HOST", "localhost")
@@ -115,124 +116,213 @@ def add_actor(request):
     actor_type = request.POST.get("actor_type")
     print(actor_name)
     print(actor_type)
-    actor = Actor(
-        name=actor_name, actor_type=actor_type
-    )
+    # update model
+    priv_level = request.POST.get("priv_level")  # ADD FIELD TO REQUEST
 
-    response_status = controller_client.AddActor(actor)
+    # add line to get comments, after we have added comments functionality in interface.js
+    new_actor = Actor(name=actor_name, priv_level=priv_level, comments='')
+    new_actor.save()
 
-    return JsonResponse(response_status.code, safe=False)
+    # actor = Actor(
+    #     name=actor_name, actor_type=actor_type
+    # )
+
+    # response_status = controller_client.AddActor(actor)
+
+    # return JsonResponse(response_status.code, safe=False)
+    return JsonResponse(200, safe=False)
 
 def add_server(request):
     server_name = request.POST.get("name")
+    # update model
+    server = Server(name=server_name)
+    server.save()
 
-    server_request = AddServerRequest(
-        name=server_name
-    )
+    # server_request = AddServerRequest(
+    #     name=server_name
+    # )
 
-    response_status = controller_client.AddServer(server_request)
+    # response_status = controller_client.AddServer(server_request)
 
-    return JsonResponse(response_status.code, safe=False)
+    return JsonResponse(200, safe=False)
 
 def add_process(request):
     process_name = request.POST.get("name")
+    # update model
+    process = Process(name=process_name)
+    process.save()
 
-    process_request = AddProcessRequest(
-        name=process_name
-    )
+    # process_request = AddProcessRequest(
+    #     name=process_name
+    # )
 
-    response_status = controller_client.AddProcess(process_request)
+    # response_status = controller_client.AddProcess(process_request)
 
-    return JsonResponse(response_status.code, safe=False)
+    return JsonResponse(200, safe=False)
 
 def add_lambda(request):
     lambda_name = request.POST.get("name")
+    # update model
+    lam = Lambda(name=lambda_name)
+    lam.save()
 
-    lambda_request = AddLambdaRequest(
-        name=lambda_name
-    )
+    # lambda_request = AddLambdaRequest(
+    #     name=lambda_name
+    # )
 
-    response_status = controller_client.AddLambda(lambda_request)
+    # response_status = controller_client.AddLambda(lambda_request)
 
-    return JsonResponse(response_status.code, safe=False)
+    return JsonResponse(200, safe=False)
 
 
 def add_boundary(request):
+    name = request.POST.get("boundary_name")
     actor_name = request.POST.get("actor_name")
     actor_type = request.POST.get("actor_type")
-    actor = Actor(
-        name=actor_name, actor_type=actor_type
-    )
-    boundary_name = request.POST.get("boundary_name")
-    boundary = Boundary(name=boundary_name, boundary_owner=actor)
 
-    response_status = controller_client.AddBoundary(boundary)
+    # actor = Actor(
+    #     name=actor_name, actor_type=actor_type
+    # )
+    # boundary_name = request.POST.get("boundary_name")
+    # boundary = Boundary(name=boundary_name, boundary_owner=actor)
+    # TODO: update model
+    tb = TrustBoundary(name=name, actor_name=actor_name, actor_type=actor_type)
+    # TODO: add assets to trust boundary
+    tb.save()
 
-    return JsonResponse(response_status.code, safe=False)
+    # response_status = controller_client.AddBoundary(boundary)
+
+    return JsonResponse(200, safe=False)
 
 
 def add_datastore(request):
     name = request.POST.get("name")
-    open_ports_str = request.POST.get("open_ports").split(",")
-    open_ports = []
-    for port in open_ports_str:
-        open_ports.append(int(port))
+    # open_ports_str = request.POST.get("open_ports").split(",")
+    # open_ports = []
+    # for port in open_ports_str:
+    #     open_ports.append(int(port))
+    open_ports_str = request.POST.get("open_ports")
 
     actor_name = request.POST.get("actor_name")
     actor_type = request.POST.get("actor_type")
-    actor = Actor(
-        name=actor_name, actor_type=actor_type
-    )
+    # actor = Actor(
+    #     name=actor_name, actor_type=actor_type
+    # )
     boundary_name = request.POST.get("boundary_name")
-    boundary = Boundary(name=boundary_name, boundary_owner=actor)
+    # boundary = Boundary(name=boundary_name, boundary_owner=actor)
     machine_type = request.POST.get("machine_type")
-    machine = Machine.PHYSICAL
-    if machine_type == "Virtual":
-        machine = Machine.VIRTUAL
-    elif machine_type == "Container":
-        machine = Machine.CONTAINER
-    elif machine_type == "Serverless":
-        machine = Machine.SERVERLESS
+    # machine = Machine.PHYSICAL
+    # if machine_type == "Virtual":
+    #     machine = Machine.VIRTUAL
+    # elif machine_type == "Container":
+    #     machine = Machine.CONTAINER
+    # elif machine_type == "Serverless":
+    #     machine = Machine.SERVERLESS
     datastore_type = request.POST.get("ds_type")
+    #
+    # trust_boundaries = [boundary]
+    # datastore_request = AddDatastoreRequest(
+    #     name=boundary_name,
+    #     open_ports=open_ports,
+    #     trust_boundary=trust_boundaries,
+    #     machine=machine,
+    #     ds_type=datastore_type,
+    # )
+    # TODO: update model
+    trust_boundary = TrustBoundary.objects.get(name=boundary_name)
+    ds = Datastore(name=name, actor_name=actor_name, actor_type=actor_type, ports=open_ports_str,
+                   machine_type=machine_type, data_type=datastore_type, trust_boundary=trust_boundary)
+    ds.save()
 
-    trust_boundaries = [boundary]
-    datastore_request = AddDatastoreRequest(
-        name=boundary_name,
-        open_ports=open_ports,
-        trust_boundary=trust_boundaries,
-        machine=machine,
-        ds_type=datastore_type,
-    )
 
-    response_status = controller_client.AddDatastore(datastore_request)
+    # response_status = controller_client.AddDatastore(datastore_request)
 
-    return JsonResponse(response_status.code, safe=False)
+    return JsonResponse(200, safe=False)
 
 def add_externalasset(request):
     name = request.POST.get("name")
-    open_ports_str = request.POST.get("open_port").split(",")
-    open_ports = []
-    for port in open_ports_str:
-        open_ports.append(int(port))
-    
+    open_ports_str = request.POST.get("open_port")
     machine_type = request.POST.get("machine_type")
-    machine = Machine.PHYSICAL
-    if machine_type == "Virtual":
-        machine = Machine.VIRTUAL
-    elif machine_type == "Container":
-        machine = Machine.CONTAINER
-    elif machine_type == "Serverless":
-        machine = Machine.SERVERLESS
+    # machine = Machine.PHYSICAL
+    # if machine_type == "Virtual":
+    #     machine = Machine.VIRTUAL
+    # elif machine_type == "Container":
+    #     machine = Machine.CONTAINER
+    # elif machine_type == "Serverless":
+    #     machine = Machine.SERVERLESS
 
+    # TODO: update model
+    ext = ExtAsset(name=name, open_ports=open_ports_str, machine_type=machine_type)
+    ext.save()
+    # addexternalasset_request = AddExternalAssetRequest(
+    #     name=name,
+    #     open_ports=open_ports,
+    #     machine=machine
+    # )
+    # response_status = controller_client.AddExternalAsset(
+    #     addexternalasset_request
+    # )
 
+    return JsonResponse(200, safe=False)
 
-    addexternalasset_request = AddExternalAssetRequest(
-        name=name,
-        open_ports=open_ports,
-        machine=machine
-    )
-    response_status = controller_client.AddExternalAsset(
-        addexternalasset_request
-    )
+def delete_asset(request):
+    response_code = 200
+    name = request.POST.get("name")
+    asset_type = request.POST.get("type")
+    # TODO: wrap in try-except and send non-200 response on failure
+    if asset_type == "Actor":
+        Actor.objects.filter(name=name).delete()
+    elif asset_type == "Server":
+        Server.objects.filter(name=name).delete()
+    elif asset_type == "Process":
+        Process.objects.filter(name=name).delete()
+    elif asset_type == "Lambda":
+        Lambda.objects.filter(name=name).delete()
+    elif asset_type == "Boundary":
+        TrustBoundary.objects.filter(name=name).delete()
+    elif asset_type == "Datastore":
+        Datastore.objects.filter(name=name).delete()
+    else: # external asset
+        ExtAsset.objects.filter(name=name).delete()
 
-    return JsonResponse(response_status.code, safe=False)
+    return JsonResponse(response_code, safe=False)
+
+def delete_all_assets(request):
+    Actor.objects.all().delete()
+    Server.objects.all().delete()
+    Process.objects.all().delete()
+    Lambda.objects.all().delete()
+    TrustBoundary.objects.all().delete()
+    Datastore.objects.all().delete()
+    ExtAsset.objects.all().delete()
+    return JsonResponse(200, safe=False)
+
+def add_dataflow(request):
+    source = request.POST.get("source")
+    dest = request.POST.get("target")
+    name = request.POST.get("name")
+    print(request.POST)
+    print(f'source: {source}, dest: {dest}')
+    df = DataFlow(source=source, dest=dest, name=name)
+    df.save()
+
+    return JsonResponse(200, safe=False)
+
+def load_dfd(request):
+    # data = {'actor' : list(Actor.objects.all()),
+    #         'server': list(Server.objects.all()),
+    #         'process': list(Process.objects.all()),
+    #         'lambda': list(Lambda.objects.all()),
+    #         'trustboundary': list(TrustBoundary.objects.all()),
+    #         'datastore': list(Datastore.objects.all()),
+    #         'extasset': list(ExtAsset.objects.all()),
+    #         'dataflow': list(DataFlow.objects.all()),
+    #         }
+    print(list(Actor.objects.values()))
+    print(list(DataFlow.objects.values()))
+    data = {'assets': list(Actor.objects.values()) + list(Server.objects.values()) + list(Process.objects.values())
+                      + list(Lambda.objects.values()) + list(TrustBoundary.objects.values()) + list(Datastore.objects.values())
+                      + list(ExtAsset.objects.values()),
+            'dataflows': list(DataFlow.objects.values()),
+            }
+    return JsonResponse(data, safe=False)

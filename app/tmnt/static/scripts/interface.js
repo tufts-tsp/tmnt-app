@@ -330,6 +330,191 @@ function showSuggestedControls() {
     }
 }
 
+function loadDfd() {
+    // for element in elements, call loadElement
+    d3.json(loadDfdUrl).then(function(data) {
+        // console.debug(data);
+        data.assets.forEach(function(asset){loadElement(asset.type, asset.name);});
+        data.dataflows.forEach(function(df){loadDataFlow(df.source, df.target, df.name)});
+    });
+
+    // for df in dataflows, call loadDataFlow
+    // TODO: process trust boundaries
+}
+
+function loadElement(asset_type, asset_name) {
+    // Prompt user for asset name
+    let area = d3.select('.dfd_assetview').node().getBoundingClientRect();
+
+    // Add new node to nodes array
+    let rand_x = area.width/2 + Math.random()*5 - 10;
+    let rand_y = area.height/2 + Math.random()*5 - 10;
+
+    // deep cloning hard coded suggested threats and controls
+    let threats = [[JSON.parse(JSON.stringify(threat_suggest[0])), JSON.parse(JSON.stringify(threat_suggest[1])), JSON.parse(JSON.stringify(threat_suggest[2]))], [], []];
+    let controls = [[JSON.parse(JSON.stringify(control_suggest[0])), JSON.parse(JSON.stringify(control_suggest[1])), JSON.parse(JSON.stringify(control_suggest[2]))], [], []];
+    nodes.push({
+        "id": total_nodes,
+        "asset_type": asset_type,
+        "asset_name": asset_name,
+        'x': rand_x,
+        'y': rand_y,
+        "threats": threats,
+        "controls": controls,
+        "selected": false
+    })
+    total_nodes++;
+
+    if (asset_type === "Actor" || asset_type === "External Entity") {
+        nodes[nodes.length - 1].boundaries = [];
+    }
+
+    // Select every node and attach it to an asset
+    var node_update = svg.selectAll(".node_group")
+        .data(simulation.nodes(), function (d) {return d.id});
+
+    // node.enter() gets every NEWLY ADDED node.
+    // For each of these, append a node_group g to the new node...
+    let node_group = node_update.enter().append("g")
+        .on("click", clicked)
+        .attr("class", "node_group")
+        .call(d3.drag().on("drag", dragged));
+        // TODO maybe add a dragend that selects the node if the drag is tiny?
+        // that way small drags are still registered as clicks for selection
+
+    // ...attach a shape to that group...
+    // (big switch statement to decide the proper shape for asset_type)
+    switch (asset_type) {
+        case "Actor":
+            node_group
+            .append('rect')
+            .attr('class', 'asset')
+            .attr('x', -30)
+            .attr('y', -30)
+            .attr('width', 60)
+            .attr('height', 60)
+            .style('fill', 'white')
+            .style('stroke', 'black');
+            break;
+        case "Server":
+            node_group
+            .append('rect')
+            .attr('class', 'asset')
+            .attr('x', -30)
+            .attr('y', -30)
+            .attr('width', 60)
+            .attr('height', 60)
+            .style('fill', 'white')
+            .style('stroke', 'black');
+            break;
+
+        case "Data Store":
+            let radX = 30;
+            let radY = 15;
+
+            node_group
+            .append('rect')
+            .attr('class', 'asset')
+            .attr('x', 0 - radX)
+            .attr('y', -1.5*radY)
+            .attr('width', radX*2)
+            .attr('height', radY*3)
+            .style('fill', 'white')
+            .style('stroke', 'black');
+
+            node_group
+            .append('ellipse')
+            .attr('class', 'asset')
+            .attr('cx', 0)
+            .attr('cy', -1.5*radY)
+            .attr('rx', radX)
+            .attr('ry', radY)
+            .style('fill', 'white')
+            .style('stroke', 'black');
+
+            node_group
+            .append('ellipse')
+            .attr('class', 'asset')
+            .attr('cx', 0)
+            .attr('cy', 1.5*radY)
+            .attr('rx', radX)
+            .attr('ry', radY)
+            .style('fill', 'white')
+            .style('stroke', 'black');
+            break;
+        case "Process":
+            node_group
+            .append('circle')
+            .attr('class', 'asset')
+            .attr('cx', 0)
+            .attr('cy', 0)
+            .attr('r', 30)
+            .style('fill', 'white')
+            .style('stroke', 'black');
+            break;
+        case "External Entity":
+            node_group
+            .append('rect')
+            .attr('class', 'asset')
+            .attr('x', -30)
+            .attr('y', -30)
+            .attr('width', 60)
+            .attr('height', 60)
+            .style('fill', 'white')
+            .style('stroke', 'black');
+            break;
+        case "Lambda":
+            node_group
+            .append('text')
+            .attr('class', 'asset')
+            .attr('x', -25)
+            .attr('y', 40)
+            .attr('fill', 'white')
+            .style('stroke', 'black')
+            .style("font-size", '100pt')
+            .style('font-family', 'Calibri')
+            .text('λ');
+            break;
+        default:
+            // should never happen
+            console.debug("ERROR: loadElement() got name " + name + ", which isn't recognized as a shape");
+            break;
+    }
+
+    // ...and attach name of asset, provided by user to that group
+    node_group
+        .append("text")
+        .attr("class", "asset_label")
+        .attr("x", 15)
+        .attr("y", 15)
+        .attr("text-anchor", "middle")
+        .attr("alignment-baseline", "central")
+        .attr("fill", "black")
+        .style("font-size", "16pt")
+        .text(asset_name);
+
+    // force nodes to start in the center of the canvas
+    node_group
+        .attr("transform", "translate(" + area.width/2 + "," + area.height/2 + ")")
+
+    // Also, remove any duplicate nodes.
+    node_update.exit().remove();
+
+    // Last, (re)run the force simulation
+    simulation.nodes(nodes);
+    simulation.alpha(1.0).restart();
+
+    updateAssetDropdowns();
+
+    updateThreatBadges(nodes[nodeIndex(total_nodes - 1)]);
+
+    // Update list of nodes in options dropdown
+    if (document.getElementById("options")) {
+        var curr_asset = document.getElementById("options").children[0].value;
+        document.getElementById("add_dataflow").replaceChild(createDataflowList(curr_asset), document.getElementById("dataflow_button"));
+    }
+}
+
 // When an Asset button is clicked, this function creates a corresponding
 // node, then pushes it to the list of nodes for d3 to draw at a later step.
 function addElement(asset_type) {
@@ -434,6 +619,7 @@ function addElement(asset_type) {
                         actor_name: asset_name,
                         actor_type: document.getElementById("actor_type").value,
                         actor_access: document.getElementById("actor_access").value,
+                        priv_level: "Not implemented"  // TODO: fill in with privilege level
                     },
                     dataType: "html",
                     success: function(result){
@@ -2308,6 +2494,116 @@ function updateFindings() {
 
 }
 
+// Adds a dataflow loaded from database
+function loadDataFlow(source, target, name) {
+    let double_headed = false
+    for (let link of links) {
+        // Prevent duplicate dataflows
+        if (link.source.id === nodes[source].id && link.target.id === nodes[target].id) {
+            alert("Cannot add a duplicate dataflow!");
+            return;
+        }
+        else if (link.source.id === nodes[target].id && link.target.id === nodes[source].id) {
+            double_headed = true
+        }
+    }
+
+    // Define the link that d3 will use to apply forces...
+    let link = {
+        "name": name,
+        "source": nodes[source],
+        "target": nodes[target],
+        // "authentication": None,
+        // "multifactor_authentication": None,
+        "distance": 30n
+    }
+    // ...and append it to our array of links
+    links.push(link);
+
+    // Then, get a selection containing the changes to links from this step
+    var link_update = svg.selectAll(".link").data(links,
+    function(d) { return d.source.id + "-" + d.target.id; });
+
+    // Use that selection to get the newly added link,
+    // and create a group to add the link
+    let link_group = link_update.enter()
+    .append("g")
+    .attr("class", "link_group")
+
+    // Append a line to that group...
+    link_group
+        .insert("line", ".node") // "insert a line into the SVG right before each .node in the SVG"
+        .attr("class", "link")
+        .attr("stroke", "black")
+        .attr("marker-end", "url(#arrow)")
+        .attr("markerWidth", 300)
+        .on("click", function(event, d) {
+            // Reset all links to default state
+            d3.selectAll(".link")
+                .style("stroke", "black")
+                .style("stroke-width", "1")
+                .attr("marker-end", "url(#arrow)");
+
+            // Highlight only the clicked link
+            d3.select(this)
+                .style("stroke", "#3E8EDE")
+                .attr("marker-end", "url(#arrow-highlight)");
+            viewDataflow(link);
+        })
+
+    // ...as well as a name, if one was given
+    if (name != null) {
+        link_group
+            .append("text")
+            .attr("class", "dataflow_name")
+            .attr("x", 35)
+            .attr("y", (double_headed) ? 35 : 15) // In case of double-headed dataflow, push second label down
+                           // TODO: probably can make this look much cleaner
+            .attr("text-anchor", "middle")
+            .attr("alignment-baseline", "central")
+            .attr("fill", "black")
+            .attr("marker-end", "url(#arrow)")
+            .style("font-size", "16pt")
+            .text(name)
+            .on("click", function(event, d) {
+                // Reset all links to default state
+                d3.selectAll(".link")
+                    .style("stroke", "black")
+                    .style("stroke-width", "1")
+                    .attr("marker-end", "url(#arrow)");
+
+                // Highlight only the clicked link
+                d3.select(this)
+                    .style("stroke", "#3E8EDE")
+                    .attr("marker-end", "url(#arrow-highlight)");
+                viewDataflow(link);
+        });
+    }
+
+    // Check if this new dataflow is an inter-trust boundary flow
+    // for (let boundary of Object.keys(boundaries)) {
+    //     var assets = boundaries[boundary];
+    //     if ((assets.includes(nodes[source]) && !assets.includes(nodes[target])) || (assets.includes(nodes[target]) && !assets.includes(nodes[source]))) {
+    //         var jitter;
+    //         if (d3.selectAll(".boundary").filter(function() {return d3.select(this).attr("boundaryName") === boundary;}).empty()) {
+    //             jitter = (Math.random() * 0.3) + 0.1;
+    //         }
+    //         else {
+    //             jitter = d3.selectAll(".boundary").filter(function() {
+    //                 return d3.select(this).attr("boundaryName") === boundary;
+    //             }).attr("jitter");
+    //         }
+    //         appendTrustPath(link_group, boundary, jitter);
+    //     }
+    // }
+
+    // Remove any links that need to be removed
+    link_update.exit().remove();
+
+    // Last, tell our simulation to restart
+    simulation.alpha(1.0).restart();
+}
+
 // Adds a dataflow line between two chosen elements.
 function addDataFlow() {
     // Get the currently selected assets to draw a dataflow between.
@@ -2354,6 +2650,22 @@ function addDataFlow() {
         // "multifactor_authentication": None,
         "distance": 30n
     }
+    // tell views.py that we made a new dataflow
+    $.ajax({
+        type: "POST",
+        url: addDataFlowUrl,
+        data: {
+            name: dataflow_name,
+            source: nodes[source].asset_name,
+            target: nodes[target].asset_name,
+            protocol: "",  // TODO: implement protocol and comments
+            comments: ""
+        },
+        dataType: "html",
+        success: function(result){
+            alert("Added dataflow.");
+        },
+    });
 
     if (nodes[source].asset_type == "Actor" || nodes[target].asset_type == "Actor") {
         var protocol = window.prompt("What is the protocol?", "Not Specified");
@@ -3297,6 +3609,20 @@ function cancelAddingBoundary() {
     div.children[0].style.display = "none";
     div.children[1].style.display = "block";
     svg.selectAll(".node_group").on("click", clicked);
+}
+
+// Clears the DFD, used during testing and debugging
+function clearDfd() {
+    $.ajax({
+        type: "POST",
+        url: deleteAllAssetsUrl,
+        data: {},
+        data_type: "html",
+        success: function(result){
+            alert("Deleted all assets.");
+        },
+    });
+    // TODO: Call function to clear the page
 }
 
 // Add a threat to an existing DFD node.
