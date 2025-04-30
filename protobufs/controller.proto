@@ -74,6 +74,10 @@ message Actor {
     string actor_type = 2;
 }
 
+message Component {
+    string name = 1;
+}
+
 message GetActorsResponses {
     Actor actor = 1;
 }
@@ -84,7 +88,7 @@ message RemoveActorRequest {
 
 message Boundary {
     string name = 1;
-    Actor boundary_owner = 2;
+    repeated Component assets = 2;
 }
 
 message RemoveBoundaryRequest {
@@ -103,7 +107,7 @@ message AddAssetRequest {
 }
 
 message RemoveAssetRequest {
-    string name = 1;
+    int32 index = 1;
 }
 
 message AssetResponse {

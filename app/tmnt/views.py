@@ -236,3 +236,16 @@ def add_externalasset(request):
     )
 
     return JsonResponse(response_status.code, safe=False)
+
+
+def delete_asset(request):
+    index = request.POST.get("index")
+
+    delete_request = RemoveAssetRequest(
+        index=int(index)
+    )
+    response_status = controller_client.RemoveAsset(
+        delete_request
+    )
+
+    return JsonResponse(response_status.code, safe=False)
