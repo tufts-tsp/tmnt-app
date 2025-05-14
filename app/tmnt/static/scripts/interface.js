@@ -269,6 +269,15 @@ function showSuggestedThreats() {
     }
 }
 
+// helper function to get the node ID for the note with unique asset_name
+function getNodeIdFromName(name) {
+    for (let node of nodes) {
+        if (node.asset_name === name) {
+            return node.id;
+        }
+    }
+}
+
 // Displays suggested controls and allows users to either add or ignore the 
 // suggestions
 function showSuggestedControls() {
@@ -334,12 +343,33 @@ function loadDfd() {
     // for element in elements, call loadElement
     d3.json(loadDfdUrl).then(function(data) {
         // console.debug(data);
-        data.assets.forEach(function(asset){loadElement(asset.type, asset.name);});
-        data.dataflows.forEach(function(df){loadDataFlow(df.source, df.target, df.name)});
-    });
+        // data.assets.forEach(function(asset){loadElement(asset.type, asset.name);});
+        data.entity.forEach(function(ent){loadElement(ent.type, ent.name);});
+        data.dataflow.forEach(function(df){
+            // console.debug(df.source__name + getNodeIdFromName(df.source__name))
+            loadDataFlow(getNodeIdFromName(df.source__name), getNodeIdFromName(df.dest__name), df.name)});
+        // TODO: for each trust boundary in Boundary: 1) select all nodes 2) call createTrustBoundary();
+        data.boundary.forEach(function(tb){
+            console.debug(tb.entities);
+            // TODO: selected = true for each node in entities
+            tb.entities.forEach(function(ent) {
+                // console.debug(ent)
+                for (let node of nodes) {
+                    console.debug(node.asset_name)
 
-    // for df in dataflows, call loadDataFlow
-    // TODO: process trust boundaries
+                    if (node.asset_name === ent) {
+                        node.selected = true;
+                    }
+                }
+            });
+            console.debug(tb.name)
+            loadTrustBoundary(tb.name);
+            // unselect each node before continuing
+            for (let node of nodes) {
+                node.selected = false;
+            }
+        });
+    });
 }
 
 function loadElement(asset_type, asset_name) {
@@ -614,10 +644,11 @@ function addElement(asset_type) {
             document.getElementById("form_done").onclick = function () {
                 $.ajax({
                     type: "POST",
-                    url: addActorUrl,
+                    url: addEntityUrl,
                     data: {
-                        actor_name: asset_name,
-                        actor_type: document.getElementById("actor_type").value,
+                        name: asset_name,
+                        type: "Actor",
+                        actor_type: document.getElementById("actor_type").value,  // TODO: I think actor_type goes away
                         actor_access: document.getElementById("actor_access").value,
                         priv_level: "Not implemented"  // TODO: fill in with privilege level
                     },
@@ -644,9 +675,10 @@ function addElement(asset_type) {
 
             $.ajax({
                 type: "POST",
-                url: addServerUrl,
+                url: addEntityUrl,
                 data: {
-                    name: asset_name
+                    name: asset_name,
+                    type: "Server"
                 },
                 data_type: "html",
                 success: function(result){
@@ -697,13 +729,14 @@ function addElement(asset_type) {
             document.getElementById("form_done").onclick = function () {
                 $.ajax({
                     type: "POST",
-                    url: addDatastoreUrl,
+                    url: addEntityUrl,
                     data: {
-                        actor_name: document.getElementById("act_name").value,
-                        boundary_name: document.getElementById("boundary_name").value,
+                        actor_names: document.getElementById("act_name").value,  // TODO: turn this into a list
+                        boundary_name: document.getElementById("boundary_name").value,  // TODO: turn this into a list
                         name: asset_name,
+                        type: "Datastore",
                         open_ports: document.getElementById("o_port").value,
-                        machine: document.getElementById("machine_type").value,
+                        machine_type: document.getElementById("machine_type").value,
                         ds_type: document.getElementById("datastore_type").value,
                     },
                     data_type: "html",
@@ -729,9 +762,10 @@ function addElement(asset_type) {
             
             $.ajax({
                 type: "POST",
-                url: addProcessUrl,
+                url: addEntityUrl,
                 data: {
-                    name: asset_name
+                    name: asset_name,
+                    type: "Process"
                 },
                 data_type: "html",
                 success: function(result){
@@ -762,6 +796,7 @@ function addElement(asset_type) {
                     data: {
                         trust_boundaries: [],
                         name: asset_name,
+                        type: "ExtAsset",
                         open_port: document.getElementById("o_port").value,
                         machine: document.getElementById("machine_type").value
                     },
@@ -789,9 +824,10 @@ function addElement(asset_type) {
 
             $.ajax({
                 type: "POST",
-                url: addLambdaUrl,
+                url: addEntityUrl,
                 data: {
-                    name: asset_name
+                    name: asset_name,
+                    type: "Lambda",
                 },
                 data_type: "html",
                 success: function(result){
@@ -1713,8 +1749,8 @@ function createAssetOptions() {
                         for (let j = controls.length - 1; j >= 0; j--) {
                             if (controls[j].threats.includes(threats[i])) {
                                 controls[j].threats.splice(controls[j].threats.indexOf(threats[i]), 1);
-                                if (controls[j].threats.length == 0) {
-                                    controls[j].control_status == "Known";
+                                if (controls[j].threats.length === 0) {
+                                    controls[j].control_status = "Known";
                                     currNode.controls[1].push(controls[j]);
                                     controls.splice(j, 1);
                                 }
@@ -2005,6 +2041,7 @@ function createAssetOptions() {
             deleteBoundary(bound);
         }
 
+        // TODO: this is where the asset is deleted
         nodes.splice(nodeIndex(assetID), 1);
         svg.selectAll(".node_group").each(function (d) {
             if (assetID == d.id) {
@@ -2517,6 +2554,7 @@ function loadDataFlow(source, target, name) {
         // "multifactor_authentication": None,
         "distance": 30n
     }
+    console.log(link)
     // ...and append it to our array of links
     links.push(link);
 
@@ -2653,9 +2691,10 @@ function addDataFlow() {
     // tell views.py that we made a new dataflow
     $.ajax({
         type: "POST",
-        url: addDataFlowUrl,
+        url: addEntityUrl,
         data: {
             name: dataflow_name,
+            type: "Dataflow",
             source: nodes[source].asset_name,
             target: nodes[target].asset_name,
             protocol: "",  // TODO: implement protocol and comments
@@ -3355,6 +3394,7 @@ function editBoundary(selectedBoundary) {
             assets.splice(i, 1);
 
             if (!confirm("Remove " + removed.asset_name + " from this trust boundary?")) {
+                // TODO: update model
                 assets.splice(i, 0, removed);
                 return;
             }
@@ -3442,43 +3482,53 @@ function addingTrustBoundary() {
     div.appendChild(cancel_button);
 }
 
-// Adds a trust boundary containing the chosen elements
-function createTrustBoundary() {
-    // Retrieve selected nodes
-    var assets = [];
-    for (let node of nodes) {
-        if (node.selected) {
-            assets.push(node);
-        }
-    }
-
+// helper function to determine whether we can create a specific trust boundary
+function canCreateTrustBoundary(assets) {
     if (assets.length < 1) {
         alert("Please select at least one asset to create a trust boundary!");
-        return;
+        return false;
     }
-    
+
     if (!checkConnected(assets)) {
         alert("All assets in a trust boundary must be connected by dataflows!");
-        return;
+        return false;
     }
 
     // Prevent duplicate trust boundaries
     for (let boundary of Object.values(boundaries)) {
-        if (assets.length != boundary.length) {
+        if (assets.length !== boundary.length) {
             continue;
         }
         let check_duplicate = true;
         for (let i = 0; i < boundary.length; i++) {
-            if (boundary[i] != assets[i]) {
+            if (boundary[i] !== assets[i]) {
                 check_duplicate = false;
                 break;
             }
         }
         if (check_duplicate) {
             alert("Cannot add a duplicate trust boundary!");
-            cancelAddingBoundary();
-            return;
+            return false;
         }
+    }
+    return true;
+}
+
+// Adds a trust boundary containing the chosen elements
+function createTrustBoundary() {
+    // Retrieve selected nodes
+    var assets = [];
+    let asset_names = [];
+    for (let node of nodes) {
+        if (node.selected) {
+            assets.push(node);
+            asset_names.push(node.asset_name);
+        }
+    }
+
+    if (!canCreateTrustBoundary(assets)) {
+        cancelAddingBoundary();
+        return;
     }
 
     // Prompt user for trust boundary name...
@@ -3495,8 +3545,8 @@ function createTrustBoundary() {
     }
     
     // Set default boundary name if user does not name it 
-    var length = Object.keys(boundaries).length + 1;
-    if (boundary_name == "") {
+    let length = Object.keys(boundaries).length + 1;
+    if (boundary_name === "") {
         boundary_name = "Trust Boundary " + length;
     }
     // Prevent duplicate names
@@ -3521,6 +3571,40 @@ function createTrustBoundary() {
     if (document.getElementById("boundary_dropdown")) {
         resetBottomBar();
     }
+    console.debug(asset_names);
+    $.ajax({
+                    type: "POST",
+                    url: addEntityUrl,
+                    data: {
+                        name: boundary_name,
+                        type: "Boundary",
+                        // actor_type: document.getElementById("actor_type").value,
+                        // actor_access: document.getElementById("actor_access").value,
+                        actor_name: "",
+                        actor_type: "",
+                        entity_names: asset_names,
+                        comments: ""
+                    },
+                    dataType: "html",
+                    success: function(result){
+                        alert("Success");
+                    },
+                });
+}
+
+function loadTrustBoundary(boundary_name) {
+    let assets = [];
+    for (let node of nodes) {
+        if (node.selected) {
+            assets.push(node);
+        }
+    }
+
+    // get boundary name
+    boundaries[boundary_name] = assets;
+    let flow = d3.selectAll(".link_group").filter(d => (assets.includes(d.source) && !assets.includes(d.target)) || (assets.includes(d.target) && !assets.includes(d.source)));
+    let jitter = (Math.random() * 0.3) + 0.1;
+    appendTrustPath(flow, boundary_name, jitter);
 }
 
 // Helper function to append trust boundary to flows

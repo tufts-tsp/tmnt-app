@@ -2,39 +2,13 @@ from django.shortcuts import render
 from .forms import UploadDFDFileForm
 from .scripts.img_test import *
 from .models import *
+from django.db import transaction
 import io
 import os
 import subprocess
 from django.http import JsonResponse
 
 import grpc
-# from controller_pb2 import (
-#     Machine,
-#     Datastore_Type,
-#     Empty,
-#     Status,
-#     Status_Code,
-#     Actor,
-#     RemoveActorRequest,
-#     AddServerRequest,
-#     RemoveServerRequest,
-#     Boundary,
-#     RemoveBoundaryRequest,
-#     AddAssetRequest,
-#     RemoveAssetRequest,
-#     AddExternalAssetRequest,
-#     RemoveExternalAssetRequest,
-#     AddDatastoreRequest,
-#     RemoveDatastoreRequest,
-#     AddProcessRequest,
-#     RemoveProcessRequest,
-#     AddLambdaRequest,
-#     RemoveLambdaRequest,
-#     ExportRequest,
-#     ImportRequest,
-#     Event_Type,
-#     Event,
-# )
 from controller_pb2_grpc import ControllerStub
 
 controller_host = os.getenv("CONTROLLER_HOST", "localhost")
@@ -110,106 +84,120 @@ def upload_file(request):
 def workspace(request):
     return render(request, "tmnt/asset_viewer.html")
 
+def add_entity(request):
+    status_code = 500
+    name = request.POST.get("name")
+    type = request.POST.get("type")
+    print(f'add_entity received type: {type}')
+    # try:
+    if type == "Actor":
+        status_code = add_entity_actor(request)
+    elif type == "Datastore":
+        status_code = add_entity_datastore(request)
+    elif type == "Server" or type == "Process" or type == "Lambda":
+        new_entity = Entity(name=name, type=type)
+        new_entity.save()
+        return JsonResponse(200, safe=False)
+    elif type == "Boundary":
+        status_code = add_entity_boundary(request)
+    elif type == "Dataflow":
+        status_code = add_entity_dataflow(request)
+    else:
+        print(f"ERROR: unrecognized type: {type}")
+        status_code = 500
+    # except Exception as e:
+    #     print('Exception in add_entity:', e)
+    #     status_code =
+    return JsonResponse(status_code, safe=False)  # return error
 
-def add_actor(request):
-    actor_name = request.POST.get("actor_name")
+def add_entity_actor(request) -> int:
+    actor_name = request.POST.get("name")
     actor_type = request.POST.get("actor_type")
     print(actor_name)
     print(actor_type)
     # update model
     priv_level = request.POST.get("priv_level")  # ADD FIELD TO REQUEST
 
-    # add line to get comments, after we have added comments functionality in interface.js
-    new_actor = Actor(name=actor_name, priv_level=priv_level, comments='')
-    new_actor.save()
+    # TODO: add line to get comments, after we have added comments functionality in interface.js
+    # first create Entity, then create Actor to store add'l info
+    with transaction.atomic():
+        new_entity = Entity(name=actor_name, comments='', type="Actor")
+        new_entity.save()
+        new_actor = Actor(name=actor_name, parent_entity=new_entity, priv_level=priv_level)
+        new_actor.save()
 
-    # actor = Actor(
-    #     name=actor_name, actor_type=actor_type
-    # )
+    return 200
 
-    # response_status = controller_client.AddActor(actor)
+# def add_server(request):
+#     server_name = request.POST.get("name")
+#     # update model
+#     server = Server(name=server_name)
+#     server.save()
+#
+#     # server_request = AddServerRequest(
+#     #     name=server_name
+#     # )
+#
+#     # response_status = controller_client.AddServer(server_request)
+#
+#     return JsonResponse(200, safe=False)
 
-    # return JsonResponse(response_status.code, safe=False)
-    return JsonResponse(200, safe=False)
+# def add_process(request):
+#     process_name = request.POST.get("name")
+#     # update model
+#     process = Process(name=process_name)
+#     process.save()
+#
+#     # process_request = AddProcessRequest(
+#     #     name=process_name
+#     # )
+#
+#     # response_status = controller_client.AddProcess(process_request)
+#
+#     return JsonResponse(200, safe=False)
 
-def add_server(request):
-    server_name = request.POST.get("name")
-    # update model
-    server = Server(name=server_name)
-    server.save()
-
-    # server_request = AddServerRequest(
-    #     name=server_name
-    # )
-
-    # response_status = controller_client.AddServer(server_request)
-
-    return JsonResponse(200, safe=False)
-
-def add_process(request):
-    process_name = request.POST.get("name")
-    # update model
-    process = Process(name=process_name)
-    process.save()
-
-    # process_request = AddProcessRequest(
-    #     name=process_name
-    # )
-
-    # response_status = controller_client.AddProcess(process_request)
-
-    return JsonResponse(200, safe=False)
-
-def add_lambda(request):
-    lambda_name = request.POST.get("name")
-    # update model
-    lam = Lambda(name=lambda_name)
-    lam.save()
-
-    # lambda_request = AddLambdaRequest(
-    #     name=lambda_name
-    # )
-
-    # response_status = controller_client.AddLambda(lambda_request)
-
-    return JsonResponse(200, safe=False)
+# def add_lambda(request):
+#     lambda_name = request.POST.get("name")
+#     # update model
+#     lam = Lambda(name=lambda_name)
+#     lam.save()
+#
+#     # lambda_request = AddLambdaRequest(
+#     #     name=lambda_name
+#     # )
+#
+#     # response_status = controller_client.AddLambda(lambda_request)
+#
+#     return JsonResponse(200, safe=False)
 
 
-def add_boundary(request):
-    name = request.POST.get("boundary_name")
+def add_entity_boundary(request) -> int:
+    name = request.POST.get("name")
     actor_name = request.POST.get("actor_name")
     actor_type = request.POST.get("actor_type")
+    with transaction.atomic():
+        # grab names of all actors, then grab those actors
+        entity_names = request.POST.getlist("entity_names[]")
+        print(f'add_entity_boundary received entity_names: {entity_names}')
+        entities = Entity.objects.filter(name__in=entity_names)
+        tb = TrustBoundary(name=name, actor_name=actor_name, actor_type=actor_type)
+        tb.save()
+        # add assets to trust boundary
+        tb.entities.add(*entities)
+        tb.save()
 
-    # actor = Actor(
-    #     name=actor_name, actor_type=actor_type
-    # )
-    # boundary_name = request.POST.get("boundary_name")
-    # boundary = Boundary(name=boundary_name, boundary_owner=actor)
-    # TODO: update model
-    tb = TrustBoundary(name=name, actor_name=actor_name, actor_type=actor_type)
-    # TODO: add assets to trust boundary
-    tb.save()
-
-    # response_status = controller_client.AddBoundary(boundary)
-
-    return JsonResponse(200, safe=False)
+    return 200
 
 
-def add_datastore(request):
+def add_entity_datastore(request) -> int:
     name = request.POST.get("name")
+    # below not required if we're going to store ports as a comma-delimited string
     # open_ports_str = request.POST.get("open_ports").split(",")
     # open_ports = []
     # for port in open_ports_str:
     #     open_ports.append(int(port))
-    open_ports_str = request.POST.get("open_ports")
+    ports = request.POST.get("open_ports")
 
-    actor_name = request.POST.get("actor_name")
-    actor_type = request.POST.get("actor_type")
-    # actor = Actor(
-    #     name=actor_name, actor_type=actor_type
-    # )
-    boundary_name = request.POST.get("boundary_name")
-    # boundary = Boundary(name=boundary_name, boundary_owner=actor)
     machine_type = request.POST.get("machine_type")
     # machine = Machine.PHYSICAL
     # if machine_type == "Virtual":
@@ -228,16 +216,22 @@ def add_datastore(request):
     #     machine=machine,
     #     ds_type=datastore_type,
     # )
-    # TODO: update model
-    trust_boundary = TrustBoundary.objects.get(name=boundary_name)
-    ds = Datastore(name=name, actor_name=actor_name, actor_type=actor_type, ports=open_ports_str,
-                   machine_type=machine_type, data_type=datastore_type, trust_boundary=trust_boundary)
-    ds.save()
-
-
+    # create parent entity
+    with transaction.atomic():
+        parent_entity = Entity(name=name, comments='', type="Datastore")
+        parent_entity.save()
+        actor_names = [name for name in request.POST.getlist("actor_names") if name != ""]
+        actors = Entity.objects.filter(name__in=actor_names)
+        tb_names = [name for name in request.POST.getlist("tb_names") if name != ""]
+        tbs = TrustBoundary.objects.filter(name__in=tb_names)
+        ds = Datastore(parent_entity=parent_entity, ports=ports, machine_type=machine_type, data_type=datastore_type)
+        # add actors, tbs
+        ds.actors.add(actors)
+        ds.trust_boundaries.add(tbs)
+        ds.save()
     # response_status = controller_client.AddDatastore(datastore_request)
 
-    return JsonResponse(200, safe=False)
+    return 200
 
 def add_externalasset(request):
     name = request.POST.get("name")
@@ -270,59 +264,100 @@ def delete_asset(request):
     name = request.POST.get("name")
     asset_type = request.POST.get("type")
     # TODO: wrap in try-except and send non-200 response on failure
-    if asset_type == "Actor":
-        Actor.objects.filter(name=name).delete()
-    elif asset_type == "Server":
-        Server.objects.filter(name=name).delete()
-    elif asset_type == "Process":
-        Process.objects.filter(name=name).delete()
-    elif asset_type == "Lambda":
-        Lambda.objects.filter(name=name).delete()
+    # below code shouldn't be necessary if foreign key on delete cascade works properly
+    if asset_type == "Entity":
+        Entity.objects.filter(name=name).delete()
+    elif asset_type == "Dataflow":
+        DataFlow.objects.filter(name=name).delete()
     elif asset_type == "Boundary":
         TrustBoundary.objects.filter(name=name).delete()
-    elif asset_type == "Datastore":
-        Datastore.objects.filter(name=name).delete()
-    else: # external asset
+    elif asset_type == "Threat":
+        Threat.objects.filter(name=name).delete()
+    elif asset_type == "Assumption":
+        Assumption.objects.filter(name=name).delete()
+    elif asset_type == "Workflow":
+        Workflow.objects.filter(name=name).delete()
+    # if asset_type == "Actor":
+    #     Actor.objects.filter(name=name).delete()
+    # elif asset_type == "Server":
+    #     Server.objects.filter(name=name).delete()
+    # elif asset_type == "Process":
+    #     Process.objects.filter(name=name).delete()
+    # elif asset_type == "Lambda":
+    #     Lambda.objects.filter(name=name).delete()
+    # elif asset_type == "Datastore":
+    #     Datastore.objects.filter(name=name).delete()
+    elif asset_type == "ExtAsset": # external asset
         ExtAsset.objects.filter(name=name).delete()
+    else:
+        print(f"ERROR: unrecognized type: {asset_type}")
+        return JsonResponse(500, safe=False)
 
     return JsonResponse(response_code, safe=False)
 
 def delete_all_assets(request):
-    Actor.objects.all().delete()
-    Server.objects.all().delete()
-    Process.objects.all().delete()
-    Lambda.objects.all().delete()
+    Entity.objects.all().delete()
     TrustBoundary.objects.all().delete()
-    Datastore.objects.all().delete()
+    DataFlow.objects.all().delete()
     ExtAsset.objects.all().delete()
+    Assumption.objects.all().delete()
+    Threat.objects.all().delete()
+    Workflow.objects.all().delete()
     return JsonResponse(200, safe=False)
 
-def add_dataflow(request):
-    source = request.POST.get("source")
-    dest = request.POST.get("target")
+def add_entity_dataflow(request) -> int:
+    source_name = request.POST.get("source")
+    dest_name = request.POST.get("target")
     name = request.POST.get("name")
-    print(request.POST)
-    print(f'source: {source}, dest: {dest}')
-    df = DataFlow(source=source, dest=dest, name=name)
-    df.save()
+    source = Entity.objects.get(name=source_name)
+    dest = Entity.objects.get(name=dest_name)
+    # print(request.POST)
+    # print(f'source: {source}, dest: {dest}')
+    with transaction.atomic():
+        df = DataFlow(source=source, dest=dest, name=name)
+        df.save()
 
-    return JsonResponse(200, safe=False)
+    return 200
+
+
+def edit_boundary(request):
+    name = request.POST.get("name")
+    # actor_name = request.POST.get("actor_name")
+    # actor_type = request.POST.get("actor_type")
+
+    # grab names of all actors, then grab those actors
+    entity_names = request.POST.getlist("entity_names[]")
+    # print('TB entity names:', entity_names)
+    # print('TB name:', name)
+    with transaction.atomic():
+        entities = Entity.objects.filter(name__in=entity_names)
+        tb = TrustBoundary.objects.get(name=name)
+        # add assets to trust boundary
+        tb.entities.set(*entities)
+        tb.save()
 
 def load_dfd(request):
-    # data = {'actor' : list(Actor.objects.all()),
-    #         'server': list(Server.objects.all()),
-    #         'process': list(Process.objects.all()),
-    #         'lambda': list(Lambda.objects.all()),
-    #         'trustboundary': list(TrustBoundary.objects.all()),
-    #         'datastore': list(Datastore.objects.all()),
-    #         'extasset': list(ExtAsset.objects.all()),
-    #         'dataflow': list(DataFlow.objects.all()),
+    # TODO: grab all entities; should not be necessary to grab add'l info for Datastore or Actor
+    # data = {'actor' : list(Actor.objects.values()),
+    #         'server': list(Server.objects.values()),
+    #         'process': list(Process.objects.values()),
+    #         'lambda': list(Lambda.objects.values()),
+    #         'trustboundary': list(TrustBoundary.objects.values()),
+    #         'datastore': list(Datastore.objects.values()),
+    #         'extasset': list(ExtAsset.objects.values()),
+    #         'dataflow': list(DataFlow.objects.values()),
     #         }
-    print(list(Actor.objects.values()))
-    print(list(DataFlow.objects.values()))
-    data = {'assets': list(Actor.objects.values()) + list(Server.objects.values()) + list(Process.objects.values())
-                      + list(Lambda.objects.values()) + list(TrustBoundary.objects.values()) + list(Datastore.objects.values())
-                      + list(ExtAsset.objects.values()),
-            'dataflows': list(DataFlow.objects.values()),
+    tbs = list(TrustBoundary.objects.values('name'))
+    boundary = []
+    for tb in tbs:
+        boundary.append({'name': tb['name'], 'entities': [obj.name for obj in TrustBoundary.objects.get(name=tb['name']).entities.all()]})
+    data = {'entity': list(Entity.objects.values()),
+            'boundary': boundary,
+            'dataflow': list(DataFlow.objects.values('source__name', 'dest__name')),
             }
+    # data = {'assets': list(Actor.objects.values()) + list(Server.objects.values()) + list(Process.objects.values())
+    #                   + list(Lambda.objects.values()) + list(TrustBoundary.objects.values()) + list(Datastore.objects.values())
+    #                   + list(ExtAsset.objects.values()),
+    #         'dataflows': list(DataFlow.objects.values()),
+    #         }
     return JsonResponse(data, safe=False)
