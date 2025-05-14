@@ -111,7 +111,6 @@ class ControllerService(controller_pb2_grpc.ControllerServicer):
 
         asset = ExternalEntity(
             name=request.name,
-            # physical_access=request.physical_access,
             open_ports=open_ports,
             # trust_boundaries=trust_boundaries,
             machine=machine,
@@ -183,6 +182,12 @@ class ControllerService(controller_pb2_grpc.ControllerServicer):
 
         status = Status(code=Status_Code.SUCCESS)
         return status
+
+    # def DelActor(self, request, context):
+    #     actor = Actor(
+    #         request.name, request.actor_type
+    #     )
+    #     self.controller.tm.actors.append(actor)
     
     def AddServer(self, request, context):
         server = Server(
@@ -220,11 +225,19 @@ class ControllerService(controller_pb2_grpc.ControllerServicer):
     def AddBoundary(self, request, context):
         actor = Actor(
             request.trust_boundary.boundary_owner.name,
-            request.trust_boundary.boundary_owner.actor_type,
             # request.trust_boundary.boundary_owner.physical_access,
         )
         boundary = Boundary(request.trust_boundary.name, actor)
         self.controller.tm.add_boundary(boundary)
+
+        # self.controller.natural_engine.event(Event_Type.ASSET)
+
+        status = Status(code=Status_Code.SUCCESS)
+        return status
+
+    def RemoveAsset(self, request, context):
+        index=request.index
+        self.controller.tm.components.pop(index)
 
         # self.controller.natural_engine.event(Event_Type.ASSET)
 

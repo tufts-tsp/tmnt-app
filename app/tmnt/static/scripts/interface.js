@@ -5,6 +5,7 @@ var links = [];
 var workflows = {};
 var boundaries = {};
 var svg;
+var container;
 var simulation;
 var dfd_svg_fraction = 0.72;
 
@@ -66,10 +67,13 @@ window.onload = function() {
     .attr("width", area.width)
     .attr("height", area.height * dfd_svg_fraction); // TODO make this dynamic with bottom bar
 
+    // Append a container group that will hold all zoomable elements
+    // (for example, nodes, links, and other chart elements)
+    container = svg.append("g")
+        .attr("class", "chart");
+
     // Tells d3 how to handle forces
     simulation = d3.forceSimulation(nodes)
-    .force("x", d3.forceX(area.width / 2))
-    .force("y", d3.forceY(area.height / 2 * dfd_svg_fraction)) // TODO make this dynamic with bottom bar
     .force("collide", d3.forceCollide().radius(100))
     .on("tick", ticked);
 
@@ -100,6 +104,19 @@ window.onload = function() {
     .append("path")
     .attr("d", 'M 0,0 L 20,10 L 0,20 z')
     .attr("fill", "#3E8EDE"); 
+
+
+
+    const zoomBehaviour = d3.zoom()
+        .extent([[0, 0], [area.width, area.height]])       // ← tell D3 the “logical” viewport
+        .translateExtent([[0, 0], [area.width, area.height]]) // optional: clamp panning
+        .scaleExtent([0.5, 5])
+        .on('zoom', ({transform}) => {
+            container.attr('transform', transform);
+        });
+
+    svg.call(zoomBehaviour);
+
 
     // unselects node(s) and link(s) if you click on canvas
     svg.on("click", function (e) {
@@ -141,8 +158,8 @@ function collapse_bottom_bar() {
     .attr("height", area.height * dfd_svg_fraction);
 
     simulation = d3.forceSimulation(nodes)
-    .force("x", d3.forceX(area.width / 2))
-    .force("y", d3.forceY(area.height / 2 * dfd_svg_fraction))
+    // .force("x", d3.forceX(area.width / 2))
+    // .force("y", d3.forceY(area.height / 2 * dfd_svg_fraction))
     .force("collide", d3.forceCollide().radius(100))
     .on("tick", ticked);
 }
@@ -165,8 +182,8 @@ window.onresize = function() {
     .attr("height", area.height * dfd_svg_fraction); // TODO make this dynamic with bottom bar
 
     simulation = d3.forceSimulation(nodes)
-    .force("x", d3.forceX(area.width / 2))
-    .force("y", d3.forceY(area.height / 2 * dfd_svg_fraction)) // TODO make this dynamic with bottom bar
+    // .force("x", d3.forceX(area.width / 2))
+    // .force("y", d3.forceY(area.height / 2 * dfd_svg_fraction)) // TODO make this dynamic with bottom bar
     .force("collide", d3.forceCollide().radius(100))
     .on("tick", ticked);
 
@@ -278,7 +295,7 @@ function getNodeIdFromName(name) {
     }
 }
 
-// Displays suggested controls and allows users to either add or ignore the 
+// Displays suggested controls and allows users to either add or ignore the
 // suggestions
 function showSuggestedControls() {
     var dropdown = document.getElementById("control_suggest_dropdown");
@@ -591,7 +608,7 @@ function addElement(asset_type) {
     }
 
     // Select every node and attach it to an asset
-    var node_update = svg.selectAll(".node_group")
+    var node_update = container.selectAll(".node_group")
         .data(simulation.nodes(), function (d) {return d.id});
 
     // node.enter() gets every NEWLY ADDED node.
@@ -876,25 +893,70 @@ function addElement(asset_type) {
     }
 }
 
-// gives nodes new location every time the force simulation runs
-function ticked() {
-    // Transform links
-    svg.selectAll(".link")
-        .attr("x1", function(d) { return d.source.x; })
-        .attr("y1", function(d) { return d.source.y; })
-        .attr("x2", function(d) { return d.target.x; })
-        .attr("y2", function(d) { return d.target.y; });
+// Given a node and the normalized direction, figure out how far from its center the boundary lies
+function getRadius(node, dx, dy, L) {
+    switch (node.asset_type) {
+      case "Process":
+        return 30;           // circle radius
+
+      case "Actor":
+      case "Server":
+      case "External Entity":
+        // axis‐aligned 60×60 rect → half‐width=half‐height=30
+        const hw = 30, hh = 30;
+        const tx = hw / Math.abs(dx),
+              ty = hh / Math.abs(dy);
+        return Math.min(tx, ty) * L;
+
+      case "Data Store":
+        // approximate your datastore by a 60×45 box
+        const hw2 = 30, hh2 = 22.5;
+        const tx2 = hw2 / Math.abs(dx),
+              ty2 = hh2 / Math.abs(dy);
+        return Math.min(tx2, ty2) * L;
+
+      default:
+        return 30;  // fallback
+    }
+  }
+
+  // Given source/target, return both line endpoints
+  function linkEndpoints(source, target) {
+    const dx = target.x - source.x,
+          dy = target.y - source.y,
+          L  = Math.hypot(dx, dy),
+          ux = dx / L,
+          uy = dy / L;
+
+    const rS = getRadius(source, dx, dy, L),
+          rT = getRadius(target, dx, dy, L);
+
+    return {
+      x1: source.x + ux * rS,
+      y1: source.y + uy * rS,
+      x2: target.x - ux * rT,
+      y2: target.y - uy * rT
+    };
+  }
+
+  // gives nodes new location every time the force simulation runs
+  function ticked() {
+    container.selectAll(".link")
+      .attr("x1", d => linkEndpoints(d.source, d.target).x1)
+      .attr("y1", d => linkEndpoints(d.source, d.target).y1)
+      .attr("x2", d => linkEndpoints(d.source, d.target).x2)
+      .attr("y2", d => linkEndpoints(d.source, d.target).y2);
 
     // Transform nodes
-    svg.selectAll(".node_group")
+    container.selectAll(".node_group")
         .attr("transform", function(d) { return "translate("+ d.x + "," + d.y + ")"; });
 
     // Transform dataflows
-    svg.selectAll(".link_group").selectAll("text")
+    container.selectAll(".link_group").selectAll("text")
         .attr("transform", function(d) { return "translate("+ (d.source.x + d.target.x)/2 + "," + (d.source.y + d.target.y)/2 + ")"; });
 
     // Transform trust boundaries
-    svg.selectAll(".boundary")
+    container.selectAll(".boundary")
         .attr("d", function(d) {
             let boundaryName = d3.select(this).attr("boundaryName");
             let assets = boundaries[boundaryName];
@@ -902,6 +964,61 @@ function ticked() {
             return calcBoundary(d, assets, jitter);
         });
 }
+
+// given source and target nodes (with d.x, d.y, and d.asset_type),
+// return adjusted line endpoints that land on the perimeters
+function boundaryPoint(source, target) {
+    const x0 = source.x,  y0 = source.y;
+    const x1 = target.x,  y1 = target.y;
+    const dx = x1 - x0,   dy = y1 - y0;
+    const L  = Math.hypot(dx, dy);
+
+    // Normalize the vector
+    const ux = dx / L,
+          uy = dy / L;
+
+    // how far to pull back from the target center?
+    let r;
+    switch (target.asset_type) {
+      case "Process":  // circle with r = 30
+        r = 50;
+        break;
+      case "Actor":
+      case "Server":
+      case "External Entity":
+        // rectangles 60×60, centered: half-width = 30
+        // but we need the intersection on a rectangle, so:
+        const hw = 30, hh = 30;
+        // param t at which line meets vertical sides: |dx * t| = hw
+        const tx = hw / Math.abs(dx);
+        // meet horizontal sides: |dy * t| = hh
+        const ty = hh / Math.abs(dy);
+        // take the smaller t so we hit the box
+        const t = Math.min(tx, ty);
+        // distance from center to edge along the line is t * L
+        r = t * L;
+        break;
+      case "Data Store":
+        // more complex shape—two ellipses plus rect in between.
+        // approximate by rect of width=60, height=45:
+        const hw2 = 30, hh2 = 22.5;
+        const tx2 = hw2 / Math.abs(dx),
+              ty2 = hh2 / Math.abs(dy);
+        const t2  = Math.min(tx2, ty2);
+        r = t2 * L;
+        break;
+      default:
+        // fallback to circle of radius 30
+        r = 30;
+    }
+
+    return {
+      x1: x0  + ux * /* source offset? */ 0,     // usually leave source at center
+      y1: y0  + uy * /* you could pull source off too if you want double-headed */ 0,
+      x2: x1  - ux * r,  // pull back by r so arrow lands on boundary
+      y2: y1  - uy * r
+    };
+  }
 
 // Function that defines how node groups should behave when dragged.
 function dragged(e) {
@@ -2040,8 +2157,19 @@ function createAssetOptions() {
         for (let bound of delBoundaries) {
             deleteBoundary(bound);
         }
+        // TODO: this is where asset is deleted
+        $.ajax({
+            type: "POST",
+            url: delAssetUrl,
+            data: {
+                index: nodeIndex(assetID)
+            },
+            dataType: "html",
+            success: function(result){
+                alert("Success");
+            },
+        });
 
-        // TODO: this is where the asset is deleted
         nodes.splice(nodeIndex(assetID), 1);
         svg.selectAll(".node_group").each(function (d) {
             if (assetID == d.id) {
@@ -2715,7 +2843,7 @@ function addDataFlow() {
     links.push(link);
 
     // Then, get a selection containing the changes to links from this step
-    var link_update = svg.selectAll(".link").data(links,
+    var link_update = container.selectAll(".link").data(links,
     function(d) { return d.source.id + "-" + d.target.id; });
 
     // Use that selection to get the newly added link,
