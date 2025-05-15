@@ -1,29 +1,4 @@
 from django.db import models
-'''
-(All contain name UNIQUE, comments)
-
-Entities:
-- server
-- process
-- lambda
-- actor:
-    - privilege level
-- datastore
-    - ports
-    - actor name FOREIGN KEY
-    - trust boundaries FOREIGN KEY MANY TO MANY
-    - actor type
-    - machine type
-Dataflows
-    - source FOREIGN KEY
-    - destination FOREIGN KEY
-    - protocol
-
-Trust Boundaries
-     - actor type
-     - actor name
-     - assets FOREIGN KEY MANY TO MANY
-'''
 
 class Entity(models.Model):
     # Actor, Server, Process, Lambda, TrustBoundary, DataStore, ExtAsset all inherit this class
@@ -89,10 +64,16 @@ class Workflow(models.Model):
     name = models.CharField(max_length=100, unique=True)
 
 class UserAction(models.Model):
+    """
+    username: username of participant
+    type: type of action (delete {asset, threat, assumption}, create {asset, threat, assumption}, modify {asset, threat,
+    assumption})
+    details: string providing details of threat or assumption
+    """
     username = models.CharField(max_length=100, unique=True)
-    type = models.CharField(max_length=100, null=False, default="Unknown")
-    action = models.CharField(max_length=100)
-    stride_class = models.CharField(max_length=100)
+    action = models.CharField(max_length=100, null=False, default="Unknown")
     entities = models.TextField(blank=True)
+    details = models.TextField(blank=True)
+    # stride_class = models.CharField(max_length=100)
     time = models.DateTimeField(auto_now_add=True)
 

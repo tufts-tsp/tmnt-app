@@ -142,7 +142,7 @@ function collapse_bottom_bar() {
     let area = d3.select('.dfd_assetview').node().getBoundingClientRect();
 
     // uncollapses if bottom bar is already collapsed
-    if (dfd_svg_fraction == 0.98) {
+    if (dfd_svg_fraction === 0.98) {
         dfd_svg_fraction = 0.72;
         document.getElementById("collapse_button").innerHTML = "&#8595 Collapse";
         document.getElementById("collapse_button").style.cursor = "s-resize";
@@ -201,13 +201,13 @@ function showSection(icon) {
 
     // Prevent user from trying to add a threat or a control if no
     // assets exist yet in the DFD
-    if (icon == "threats") {
+    if (icon === "threats") {
         let elems = document.getElementsByClassName('threat_textbox');
         for (let elem of elems) {
             elem.disabled = (nodes.length == 0);
         }
     }
-    else if (icon == "controls") {
+    else if (icon === "controls") {
         let elems = document.getElementsByClassName('controls_textbox');
         for (let elem of elems) {
             elem.disabled = (nodes.length == 0);
@@ -219,7 +219,7 @@ function showSection(icon) {
     }
 
     // Recalculate dropdowns when findings tab is opened
-    if (icon == "findings") {
+    if (icon === "findings") {
         updateThreatDropdown();
     }
 }
@@ -387,6 +387,8 @@ function loadDfd() {
             }
         });
     });
+
+    simulation.alpha(1.0).restart();
 }
 
 function loadElement(asset_type, asset_name) {
@@ -417,7 +419,7 @@ function loadElement(asset_type, asset_name) {
     }
 
     // Select every node and attach it to an asset
-    var node_update = svg.selectAll(".node_group")
+    var node_update = container.selectAll(".node_group")
         .data(simulation.nodes(), function (d) {return d.id});
 
     // node.enter() gets every NEWLY ADDED node.
@@ -1635,7 +1637,7 @@ function editAssignedThreats(node, control) {
     div.innerHTML = "";
     for (let threat of control.threats) {
         div.innerHTML += "<button class=\"del_threat\">&#10006" + threat.threat_title + "</button>";
-        if (threat != control.threats[control.threats.length - 1]) {
+        if (threat !== control.threats[control.threats.length - 1]) {
             div.innerHTML += ",  ";
         }
     }
@@ -1652,7 +1654,7 @@ function editAssignedThreats(node, control) {
                 threat.controls.splice(threat.controls.indexOf(control), 1);
                 
                 // Check if threat is no longer mitigated
-                if (threat.controls.length == 0) {
+                if (threat.controls.length === 0) {
                     node.threats[2].splice(node.threats[2].indexOf(threat), 1);
                     threat.threat_status = "Known";
                     node.threats[1].push(threat);
@@ -1660,7 +1662,7 @@ function editAssignedThreats(node, control) {
                 }
 
                 // Check if control is no longer mitigated
-                if (control.threats.length == 0) {
+                if (control.threats.length === 0) {
                     node.controls[2].splice(node.controls[2].indexOf(control), 1);
                     control.control_status = "Known";
                     node.controls[1].push(control);
@@ -1668,7 +1670,7 @@ function editAssignedThreats(node, control) {
                 }
 
                 // Reset control display depending on status
-                if (status == 2) { 
+                if (status === 2) {
                     document.getElementById("done_edit").remove();
                     editAssignedThreats(node, control); 
                 }
@@ -1698,7 +1700,7 @@ function getDropdownValue(html_id) {
 // Helper function that finds the index of an asset in the nodes array 
 // given the asset's id 
 function nodeIndex(node_id) {
-    return nodes.findIndex(i => i.id == node_id);
+    return nodes.findIndex(i => i.id === node_id);
 }
 
 // Resets the bottom details bar to default state (nothing selected)
@@ -2158,11 +2160,14 @@ function createAssetOptions() {
             deleteBoundary(bound);
         }
         // TODO: this is where asset is deleted
+        let node_index = nodeIndex(assetID)
         $.ajax({
             type: "POST",
-            url: delAssetUrl,
+            url: deleteAssetUrl,
             data: {
-                index: nodeIndex(assetID)
+                index: node_index,
+                name: nodes[node_index].name,
+                type: nodes[node_index].type,
             },
             dataType: "html",
             success: function(result){
@@ -2381,7 +2386,7 @@ function updateWorkflowDropdown() {
         workflow_dropdown.remove(0);
     }
 
-    if (Object.keys(workflows).length == 0) {
+    if (Object.keys(workflows).length === 0) {
         workflow_dropdown.add(new Option("Add a workflow first!", -1));
         workflow_dropdown.disabled = true;
         view_button.disabled = true;
@@ -2406,7 +2411,7 @@ function updateBoundaryDropdown() {
     for (let boundary_dropdown of boundary_dropdowns) {
         boundary_dropdown.replaceChildren();
     }
-    if (Object.keys(boundaries).length == 0) {
+    if (Object.keys(boundaries).length === 0) {
         for (let boundary_dropdown of boundary_dropdowns) {
             boundary_dropdown.add(new Option("Add a trust boundary first!", -1));
             boundary_dropdown.disabled = true;
@@ -2440,10 +2445,10 @@ function updateAssetDropdowns() {
 
     let elems = document.getElementsByClassName('add_button');
     for (let elem of elems) {
-        elem.disabled = (nodes.length == 0);
+        elem.disabled = (nodes.length === 0);
     }
 
-    if (nodes.length != 0) {
+    if (nodes.length !== 0) {
         for (let dropdown of dropdowns) {
             dropdown.disabled = false;
             dropdown.selectedIndex = 0;
@@ -2687,7 +2692,7 @@ function loadDataFlow(source, target, name) {
     links.push(link);
 
     // Then, get a selection containing the changes to links from this step
-    var link_update = svg.selectAll(".link").data(links,
+    var link_update = container.selectAll(".link").data(links,
     function(d) { return d.source.id + "-" + d.target.id; });
 
     // Use that selection to get the newly added link,

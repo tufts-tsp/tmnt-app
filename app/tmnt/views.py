@@ -97,6 +97,8 @@ def add_entity(request):
     elif type == "Server" or type == "Process" or type == "Lambda":
         new_entity = Entity(name=name, type=type)
         new_entity.save()
+        ua = UserAction(username='', action=f'create {type}', entities=name)
+        ua.save()
         return JsonResponse(200, safe=False)
     elif type == "Boundary":
         status_code = add_entity_boundary(request)
@@ -119,12 +121,15 @@ def add_entity_actor(request) -> int:
     priv_level = request.POST.get("priv_level")  # ADD FIELD TO REQUEST
 
     # TODO: add line to get comments, after we have added comments functionality in interface.js
+    comments = request.POST.get("comments")
     # first create Entity, then create Actor to store add'l info
     with transaction.atomic():
         new_entity = Entity(name=actor_name, comments='', type="Actor")
         new_entity.save()
         new_actor = Actor(name=actor_name, parent_entity=new_entity, priv_level=priv_level)
         new_actor.save()
+        ua = UserAction(username='', action=f'create actor', entities=actor_name, details=f'Actor type: {actor_type}; priv_level: {priv_level}; Comments: {comments}')
+        ua.save()
 
     return 200
 
@@ -185,6 +190,9 @@ def add_entity_boundary(request) -> int:
         # add assets to trust boundary
         tb.entities.add(*entities)
         tb.save()
+        ua = UserAction(username='', action=f'create boundary', entities=str(entity_names),
+                        details=f'Actor type: {actor_type}; Actor name: {actor_name}')
+        ua.save()
 
     return 200
 
@@ -229,6 +237,8 @@ def add_entity_datastore(request) -> int:
         ds.actors.add(actors)
         ds.trust_boundaries.add(tbs)
         ds.save()
+        # TODO: fix this creation statement
+        ua = UserAction(username='', action=f'create datastore', entities=name, details='')
     # response_status = controller_client.AddDatastore(datastore_request)
 
     return 200
@@ -248,6 +258,8 @@ def add_externalasset(request):
     # TODO: update model
     ext = ExtAsset(name=name, open_ports=open_ports_str, machine_type=machine_type)
     ext.save()
+    ua = UserAction(username='', action=f'create externalasset', entities=name, details=f'Open ports: {open_ports_str}; Machine type: {machine_type}')
+    ua.save()
     # addexternalasset_request = AddExternalAssetRequest(
     #     name=name,
     #     open_ports=open_ports,
@@ -292,6 +304,14 @@ def delete_asset(request):
     else:
         print(f"ERROR: unrecognized type: {asset_type}")
         return JsonResponse(500, safe=False)
+    # username = models.CharField(max_length=100, unique=True)
+    # type = models.CharField(max_length=100, null=False, default="Unknown")
+    # action = models.CharField(max_length=100)
+    # stride_class = models.CharField(max_length=100)
+    # entities = models.TextField(blank=True)
+    # time = models.DateTimeField(auto_now_add=True)
+    ua = UserAction(username='', action=f'delete {asset_type}', entities=name)
+    ua.save()
 
     return JsonResponse(response_code, safe=False)
 
@@ -316,7 +336,8 @@ def add_entity_dataflow(request) -> int:
     with transaction.atomic():
         df = DataFlow(source=source, dest=dest, name=name)
         df.save()
-
+        ua = UserAction(username='', action=f'create dataflow', entities=name, details=f'Source: {source_name}; Destination: {dest_name}')
+        ua.save()
     return 200
 
 
@@ -335,6 +356,74 @@ def edit_boundary(request):
         # add assets to trust boundary
         tb.entities.set(*entities)
         tb.save()
+        ua = UserAction(username='', action=f'edit boundary', entities=name, details=f'Entity names: {entity_names}')
+        ua.save()
+
+def add_threat(request):
+    name = request.POST.get("name")
+    assets = request.POST.getlist("assets[]")
+    stride_class = request.POST.get("stride_class")
+    severity = request.POST.get("severity")
+    comments = request.POST.get("comments")
+    with transaction.atomic():
+        threat = Threat(name=name, stride_class=stride_class, severity=severity, comments=comments)
+        # threat.save()  # not sure if save is necessary
+        entities = Entity.objects.filter(name__in=assets)
+        threat.assets.set(*entities)
+        threat.save()
+        ua = UserAction(username='', action=f'create threat', entities=name, details=f'Assets: {assets}; STRIDE: {stride_class}; Severity: {severity}; Comments: {comments}')
+        ua.save()
+    return JsonResponse(200, safe=False)
+
+def edit_threat(request):
+    name = request.POST.get("name")
+    pass
+
+def delete_threat(request):
+    name = request.POST.get("name")
+    threat = Threat.objects.get(name=name)
+    with transaction.atomic():
+        threat.delete()
+        ua = UserAction(username='', action=f'delete threat', entities=name)
+        ua.save()
+    return JsonResponse(200, safe=False)
+
+def add_assumption(request):
+    name = request.POST.get("name")
+    assets = request.POST.getlist("assets[]")
+    threats = request.POST.getlist("threats[]")
+    comments = request.POST.get("comments")
+    with transaction.atomic():
+        assump = Assumption(name=name, comments=comments)
+        # assump.save()  # not sure if save is necessary
+        assets = Entity.objects.filter(name__in=assets)
+        threats = Threat.objects.filter(name__in=threats)
+        assump.assets.set(*assets)
+        assump.threats.set(*threats)
+        assump.save()
+        ua = UserAction(username='', action=f'create assumption', entities=name,
+                        details=f'Assets: {assets}; Threats: {threats} Comments: {comments}')
+        ua.save()
+    return JsonResponse(200, safe=False)
+
+def edit_assumption(request):
+    name = request.POST.get("name")
+    assets = request.POST.getlist("assets[]")
+    threats = request.POST.getlist("threats[]")
+    comments = request.POST.get("comments")
+    with transaction.atomic():
+        assump = Assumption.objects.get(name=name)
+        # TODO: ideally, determine which things have changed (e.g., leave unchanged fields blank in request)
+    pass
+
+def delete_assumption(request):
+    name = request.POST.get("name")
+    assump = Assumption.objects.get(name=name)
+    with transaction.atomic():
+        assump.delete()
+        ua = UserAction(username='', action=f'delete assumption', entities=name)
+        ua.save()
+    return JsonResponse(200, safe=False)
 
 def load_dfd(request):
     # TODO: grab all entities; should not be necessary to grab add'l info for Datastore or Actor
