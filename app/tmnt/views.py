@@ -133,49 +133,6 @@ def add_entity_actor(request) -> int:
 
     return 200
 
-# def add_server(request):
-#     server_name = request.POST.get("name")
-#     # update model
-#     server = Server(name=server_name)
-#     server.save()
-#
-#     # server_request = AddServerRequest(
-#     #     name=server_name
-#     # )
-#
-#     # response_status = controller_client.AddServer(server_request)
-#
-#     return JsonResponse(200, safe=False)
-
-# def add_process(request):
-#     process_name = request.POST.get("name")
-#     # update model
-#     process = Process(name=process_name)
-#     process.save()
-#
-#     # process_request = AddProcessRequest(
-#     #     name=process_name
-#     # )
-#
-#     # response_status = controller_client.AddProcess(process_request)
-#
-#     return JsonResponse(200, safe=False)
-
-# def add_lambda(request):
-#     lambda_name = request.POST.get("name")
-#     # update model
-#     lam = Lambda(name=lambda_name)
-#     lam.save()
-#
-#     # lambda_request = AddLambdaRequest(
-#     #     name=lambda_name
-#     # )
-#
-#     # response_status = controller_client.AddLambda(lambda_request)
-#
-#     return JsonResponse(200, safe=False)
-
-
 def add_entity_boundary(request) -> int:
     name = request.POST.get("name")
     actor_name = request.POST.get("actor_name")
@@ -226,7 +183,7 @@ def add_entity_datastore(request) -> int:
     # )
     # create parent entity
     with transaction.atomic():
-        parent_entity = Entity(name=name, comments='', type="Datastore")
+        parent_entity = Entity(name=name, comments='', type="Data Store")
         parent_entity.save()
         actor_names = [name for name in request.POST.getlist("actor_names") if name != ""]
         actors = Entity.objects.filter(name__in=actor_names)
@@ -234,11 +191,11 @@ def add_entity_datastore(request) -> int:
         tbs = TrustBoundary.objects.filter(name__in=tb_names)
         ds = Datastore(parent_entity=parent_entity, ports=ports, machine_type=machine_type, data_type=datastore_type)
         # add actors, tbs
-        ds.actors.add(actors)
-        ds.trust_boundaries.add(tbs)
+        # ds.actors.add(*actors)
+        # ds.trust_boundaries.add(tbs)
         ds.save()
-        # TODO: fix this creation statement
         ua = UserAction(username='', action=f'create datastore', entities=name, details='')
+        ua.save()
     # response_status = controller_client.AddDatastore(datastore_request)
 
     return 200
@@ -255,7 +212,6 @@ def add_externalasset(request):
     # elif machine_type == "Serverless":
     #     machine = Machine.SERVERLESS
 
-    # TODO: update model
     ext = ExtAsset(name=name, open_ports=open_ports_str, machine_type=machine_type)
     ext.save()
     ua = UserAction(username='', action=f'create externalasset', entities=name, details=f'Open ports: {open_ports_str}; Machine type: {machine_type}')
@@ -277,8 +233,14 @@ def delete_asset(request):
     asset_type = request.POST.get("type")
     # TODO: wrap in try-except and send non-200 response on failure
     # below code shouldn't be necessary if foreign key on delete cascade works properly
-    if asset_type == "Entity":
+    if asset_type == "Process" or asset_type == "Lambda" or asset_type == "Server":
         Entity.objects.filter(name=name).delete()
+    elif asset_type == "Actor":
+        Actor.objects.filter(name=name).delete()
+    elif asset_type == "Data Store":
+        Datastore.objects.filter(name=name).delete()
+    elif asset_type == "External Entity": # external asset
+        ExtAsset.objects.filter(name=name).delete()
     elif asset_type == "Dataflow":
         DataFlow.objects.filter(name=name).delete()
     elif asset_type == "Boundary":
@@ -289,33 +251,16 @@ def delete_asset(request):
         Assumption.objects.filter(name=name).delete()
     elif asset_type == "Workflow":
         Workflow.objects.filter(name=name).delete()
-    # if asset_type == "Actor":
-    #     Actor.objects.filter(name=name).delete()
-    # elif asset_type == "Server":
-    #     Server.objects.filter(name=name).delete()
-    # elif asset_type == "Process":
-    #     Process.objects.filter(name=name).delete()
-    # elif asset_type == "Lambda":
-    #     Lambda.objects.filter(name=name).delete()
-    # elif asset_type == "Datastore":
-    #     Datastore.objects.filter(name=name).delete()
-    elif asset_type == "ExtAsset": # external asset
-        ExtAsset.objects.filter(name=name).delete()
     else:
         print(f"ERROR: unrecognized type: {asset_type}")
         return JsonResponse(500, safe=False)
-    # username = models.CharField(max_length=100, unique=True)
-    # type = models.CharField(max_length=100, null=False, default="Unknown")
-    # action = models.CharField(max_length=100)
-    # stride_class = models.CharField(max_length=100)
-    # entities = models.TextField(blank=True)
-    # time = models.DateTimeField(auto_now_add=True)
     ua = UserAction(username='', action=f'delete {asset_type}', entities=name)
     ua.save()
 
     return JsonResponse(response_code, safe=False)
 
 def delete_all_assets(request):
+    # does not include UserAction insert because this is just for testing
     Entity.objects.all().delete()
     TrustBoundary.objects.all().delete()
     DataFlow.objects.all().delete()

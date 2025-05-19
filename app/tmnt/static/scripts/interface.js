@@ -2161,13 +2161,15 @@ function createAssetOptions() {
         }
         // TODO: this is where asset is deleted
         let node_index = nodeIndex(assetID)
+        console.debug("Asset type, node index, assetID:")
+        console.debug(nodes[node_index])
         $.ajax({
             type: "POST",
             url: deleteAssetUrl,
             data: {
                 index: node_index,
-                name: nodes[node_index].name,
-                type: nodes[node_index].type,
+                name: nodes[node_index].asset_name,
+                type: nodes[node_index].asset_type,
             },
             dataType: "html",
             success: function(result){

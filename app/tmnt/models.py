@@ -35,6 +35,7 @@ class Datastore(Entity):
     # type = models.CharField(max_length=15, null=False, default="Datastore")
 
 class ExtAsset(models.Model):
+    name = models.CharField(max_length=100, unique=True)
     parent_entity = models.ForeignKey(Entity, on_delete=models.CASCADE, related_name='parent_extasset')
     ports = models.CharField(max_length=400)  # expecting comma-separated list of integers
     machine_type = models.CharField(max_length=100)
@@ -70,7 +71,7 @@ class UserAction(models.Model):
     assumption})
     details: string providing details of threat or assumption
     """
-    username = models.CharField(max_length=100, unique=True)
+    username = models.CharField(max_length=100)
     action = models.CharField(max_length=100, null=False, default="Unknown")
     entities = models.TextField(blank=True)
     details = models.TextField(blank=True)
