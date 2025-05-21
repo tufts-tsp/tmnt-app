@@ -57,14 +57,14 @@
             <h3>Dataflows</h3>
 
             <label for="source_dropdown">Source:</label>
-            <select name="source_dropdown" class="dropdown" id="source_dropdown" disabled>
+            <select name="source_dropdown" class="dropdown asset_dropdown" id="source_dropdown" disabled>
                 <option value="invalid">Add an asset first!</option>
             </select>
 
             <br>
 
             <label for="target_dropdown">Target:</label>
-            <select name="target_dropdown" class="dropdown" id="target_dropdown" disabled>
+            <select name="target_dropdown" class="dropdown asset_dropdown" id="target_dropdown" disabled>
                 <option value="invalid">Add an asset first!</option>
             </select>
 
@@ -78,7 +78,7 @@
             <div>Add components in the order in which they occur:</div>
             <div id="adding_workflows">
                 <label>1st:</label>
-                <select name="component_dropdown" class="dropdown" disabled>
+                <select name="component_dropdown" class="dropdown asset_dropdown" disabled>
                     <option value="invalid">Add an asset first!</option>
                 </select>
             </div>
@@ -111,7 +111,7 @@
             <h3>Threats</h3>
             <div>
             <label for="threat_dropdown">Add to asset:</label>
-            <select name="threat_dropdown" id="threat_dropdown" class="dropdown" onchange="showSuggestedThreats()" disabled>
+            <select name="threat_dropdown" id="threat_dropdown" class="dropdown asset_dropdown" onchange="showSuggestedThreats()" disabled>
                 <option value="invalid">Add an asset first!</option>
             </select>
 
@@ -123,7 +123,16 @@
             <br>
 
             <textarea class="threat_textbox" id="threat_description" name="threat_description" placeholder="(Optional) Threat description..."rows="4" cols="20"></textarea>
-
+            <br>
+                <label for="stride_category">STRIDE category:</label>
+                <select name="stride_category" id="stride_category" class="dropdown">
+                    <option value="Spoofing">Spoofing</option>
+                    <option value="Tampering">Tampering</option>
+                    <option value="Repudiation">Repudiation</option>
+                    <option value="Information Disclosure">Information Disclosure</option>
+                    <option value="Denial of Service">Denial of Service</option>
+                    <option value="Elevation of Privilege">Elevation of Privilege</option>
+                </select>
             <button type="button" class="add_button" onClick = "addThreat()">Add Threat</button></div>
             <br>
             <div id = "added_threats">
@@ -143,7 +152,7 @@
             <h3>Controls</h3>
             <div>
             <label for="control_dropdown">Apply to asset:</label>
-            <select name="control_dropdown" id = "control_dropdown" class="dropdown" onchange="showSuggestedControls()" disabled>
+            <select name="control_dropdown" id = "control_dropdown" class="dropdown asset_dropdown" onchange="showSuggestedControls()" disabled>
                 <option value="invalid">Add an asset first!</option>
             </select>
             <br>
@@ -169,7 +178,7 @@
 
             <h3>Findings</h3>
             <label for="findings_asset_dropdown">Review findings for:</label>
-            <select id="findings_asset_dropdown" name="asset_dropdown" onchange="updateThreatDropdown()" id="asset_dropdown" class="dropdown" disabled>
+            <select id="findings_asset_dropdown" name="asset_dropdown" onchange="updateThreatDropdown()" id="asset_dropdown" class="dropdown asset_dropdown" disabled>
                 <option value="-1">Add an asset first!</option>
             </select>
             <br>

@@ -51,9 +51,10 @@ class DataFlow(models.Model):
 class Threat(models.Model):
     name = models.CharField(max_length=100)
     assets = models.ManyToManyField(Entity)
+    cve_id = models.CharField(max_length=100)
     stride_class = models.CharField(max_length=50)  # has six values...maybe revisit type
     severity = models.CharField(max_length=100)  # maybe revisit type
-    comments = models.TextField(blank=True)
+    description = models.TextField(blank=True)
 
 class Assumption(models.Model):
     name = models.CharField(max_length=100, unique=True)

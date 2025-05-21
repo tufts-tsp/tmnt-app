@@ -1352,7 +1352,7 @@ function associateBoundary(node) {
         }
         associateBoundary(node);
 
-        svg.selectAll(".link_group").filter(d => (d.source == node && assets.includes(d.target)) || (d.target == node && assets.includes(d.source))).selectAll(".boundary").filter(function() { return d3.select(this).attr("boundaryName") == boundary_name; }).remove();
+        svg.selectAll(".link_group").filter(d => (d.source === node && assets.includes(d.target)) || (d.target === node && assets.includes(d.source))).selectAll(".boundary").filter(function() { return d3.select(this).attr("boundaryName") === boundary_name; }).remove();
         var flow = d3.selectAll(".link_group").filter(d => (assets.includes(d.source) && !assets.includes(d.target)) || (assets.includes(d.target) && !assets.includes(d.source)));
 
         // If there are inter-trust boundaries, retrieve jitter value, else 
@@ -1376,7 +1376,7 @@ function associateBoundary(node) {
 function displayThreat(node, status, threat) {
     var bottom_bar = document.getElementById("bottom_bar");
     bottom_bar.innerHTML = "<h2>" + threat.threat_title + " ("+ threat.threat_num + ")</h2>" + node.asset_name + " | " + threat.threat_status + " Threat<br>";
-    if (threat.threat_description != "") {
+    if (threat.threat_description !== "") {
         bottom_bar.innerHTML += "<br><h3>Description</h3>&emsp;&emsp;" + threat.threat_description + "<br>";
     }
     switch (status) {
@@ -1410,7 +1410,7 @@ function displayThreat(node, status, threat) {
             display.id = "control_display";
             for (let control of threat.controls) {
                 display.innerText += control.control_title;
-                if (control != threat.controls[threat.controls.length - 1]) {
+                if (control !== threat.controls[threat.controls.length - 1]) {
                     display.innerText += ",  ";
                 }
             }
@@ -1440,20 +1440,20 @@ function displayThreat(node, status, threat) {
             setTimeout(function() {
                 button = document.getElementById("mitigate_threat");
                 button.onclick = function () {
-                    var selected = getDropdownValue("assign_control")
-                    if (selected == -1) {
+                    let selected = getDropdownValue("assign_control")
+                    if (selected === -1) {
                         alert("Please select a control to assign to " + threat.threat_title + "!");
                         return;
                     }
                     threat.controls.push(controls[selected]);
-                    if (threat.threat_status == "Known") {
+                    if (threat.threat_status === "Known") {
                         node.threats[1].splice(node.threats[1].indexOf(threat), 1);
                         threat.threat_status = "Mitigated";
                         node.threats[2].push(threat);
                         updateThreatBadges(node);
                     }
                     controls[selected].threats.push(threat);
-                    if (controls[selected].control_status == "Known") {
+                    if (controls[selected].control_status === "Known") {
                         node.controls[1].splice(node.controls[1].indexOf(controls[selected]), 1);
                         controls[selected].control_status = "Mitigated";
                         node.controls[2].push(controls[selected]);
@@ -1462,6 +1462,8 @@ function displayThreat(node, status, threat) {
                 };
             }, 0);
             break;
+        default:
+            console.debug("displayThreat received unknown status (expected 0,1,2): " + status)
     }
     // Button to return to viewing current node
     bottom_bar.innerHTML += "<button class=\"view_button\" id=\"threat_view_asset\">View " + node.asset_name + "</button>";
@@ -1479,7 +1481,7 @@ function editAssignedControls(node, threat) {
     div.innerHTML = "";
     for (let control of threat.controls) {
         div.innerHTML += "<button class=\"del_control\">&#10006" + control.control_title + "</button>";
-        if (control != threat.controls[threat.controls.length - 1]) {
+        if (control !== threat.controls[threat.controls.length - 1]) {
             div.innerHTML += ",  ";
         }
     }
@@ -1496,7 +1498,7 @@ function editAssignedControls(node, threat) {
                 control.threats.splice(control.threats.indexOf(threat), 1);
                 
                 // Check if control is no longer mitigated
-                if (control.threats.length == 0) {
+                if (control.threats.length === 0) {
                     node.controls[2].splice(node.controls[2].indexOf(control), 1);
                     control.control_status = "Known";
                     node.controls[1].push(control);
@@ -1604,13 +1606,13 @@ function displayControl(node, status, control) {
                         return;
                     }
                     control.threats.push(threats[selected]);
-                    if (control.control_status == "Known") {
+                    if (control.control_status === "Known") {
                         node.controls[1].splice(node.controls[1].indexOf(control), 1);
                         control.control_status = "Mitigated";
                         node.controls[2].push(control);
                     }
                     threats[selected].controls.push(control);
-                    if (threats[selected].threat_status == "Known") {
+                    if (threats[selected].threat_status === "Known") {
                         node.threats[1].splice(node.threats[1].indexOf(threats[selected]), 1);
                         threats[selected].threat_status = "Mitigated";
                         node.threats[2].push(threats[selected]);
@@ -1752,7 +1754,7 @@ function createAssetOptions() {
     view_dataflows.onclick = function() {
         var has_dataflows = false;
         for (let dataflow of links) {
-            if (dataflow.source == currNode || dataflow.target == currNode) {
+            if (dataflow.source === currNode || dataflow.target === currNode) {
                 has_dataflows = true;
             }
         }
@@ -1821,7 +1823,7 @@ function createAssetOptions() {
     remove_threat.innerHTML = "Threat...";
     remove_threat.onclick = function() {
         var threats = currNode.threats[1].concat(currNode.threats[2]);
-        if (threats.length == 0) {
+        if (threats.length === 0) {
             alert("There are no threats added to this asset!");
             return;
         }
@@ -1858,10 +1860,10 @@ function createAssetOptions() {
             var flow_checks = document.getElementsByClassName("flowChecks");
             for (let i = flow_checks.length - 1; i >= 0; i--) {
                 if (flow_checks[i].checked) {
-                    if (threats[i].threat_status == "Known") {
+                    if (threats[i].threat_status === "Known") {
                         known.splice(known.indexOf(threats[i]), 1);
                     }
-                    else if (threats[i].threat_status == "Mitigated") {
+                    else if (threats[i].threat_status === "Mitigated") {
                         mitigated.splice(mitigated.indexOf(threats[i]), 1);
                         // checking mitigated controls with deleted threat
                         var controls = currNode.controls[2];
@@ -1900,7 +1902,7 @@ function createAssetOptions() {
     remove_control.innerHTML = "Control...";
     remove_control.onclick = function() {
         var controls = currNode.controls[1].concat(currNode.controls[2]);
-        if (controls.length == 0) {
+        if (controls.length === 0) {
             alert("There are no controls added to this asset!");
             return;
         }
@@ -1937,18 +1939,18 @@ function createAssetOptions() {
             var flow_checks = document.getElementsByClassName("flowChecks");
             for (let i = flow_checks.length - 1; i >= 0; i--) {
                 if (flow_checks[i].checked) {
-                    if (controls[i].control_status == "Known") {
+                    if (controls[i].control_status === "Known") {
                         known.splice(known.indexOf(controls[i]), 1);
                     }
-                    else if (controls[i].control_status == "Mitigated") {
+                    else if (controls[i].control_status === "Mitigated") {
                         mitigated.splice(mitigated.indexOf(controls[i]), 1);
                         // checking mitigated threats with deleted control
                         var threats = currNode.threats[2];
                         for (let j = threats.length - 1; j >= 0; j--) {
                             if (threats[j].controls.includes(controls[i])) {
                                 threats[j].controls.splice(threats[j].controls.indexOf(controls[i]), 1);
-                                if (threats[j].controls.length == 0) {
-                                    threats[j].threat_status == "Known";
+                                if (threats[j].controls.length === 0) {
+                                    threats[j].threat_status === "Known";
                                     currNode.threats[1].push(threats[j]);
                                     threats.splice(j, 1);
                                 }
@@ -1980,11 +1982,11 @@ function createAssetOptions() {
     remove_flow.onclick = function() {
         var flows = [];
         for (let i = 0; i < links.length; i++) {
-            if (links[i].source.id == assetID || links[i].target.id === assetID) {
+            if (links[i].source.id === assetID || links[i].target.id === assetID) {
                 flows.push(i);
             }
         }
-        if (flows.length == 0) {
+        if (flows.length === 0) {
             alert("There are no dataflows connected to this asset!");
             return;
         }
@@ -2027,7 +2029,7 @@ function createAssetOptions() {
                     var target = links[flows[i]].target;
                     for (let key of Object.keys(workflows)) {
                         var components = workflows[key];
-                        if (components.includes(source) && components.indexOf(source) == components.indexOf(target) - 1) {
+                        if (components.includes(source) && components.indexOf(source) === components.indexOf(target) - 1) {
                             removed_workflows = true;
                             delete workflows[key];
                         }
@@ -2076,10 +2078,10 @@ function createAssetOptions() {
         for (let key of Object.keys(workflows)) {
             if (workflows[key].includes(currNode)) {
                 var components = workflows[key];
-                if (components.length > 1 && components[0] == currNode) {
+                if (components.length > 1 && components[0] === currNode) {
                     frontWorkflows.push(key);
                 }
-                else if (components.length > 1 && components[components.length - 1] == currNode) {
+                else if (components.length > 1 && components[components.length - 1] === currNode) {
                     backWorkflows.push(key);
                 }
                 else {
@@ -2087,15 +2089,15 @@ function createAssetOptions() {
                 }
             }
         }
-        if (!frontWorkflows.length == 0 && !confirm("This will delete " + currNode.asset_name + " from the front of the following workflows: " + frontWorkflows.toString() + "\nContinue?")) {
+        if (!frontWorkflows.length === 0 && !confirm("This will delete " + currNode.asset_name + " from the front of the following workflows: " + frontWorkflows.toString() + "\nContinue?")) {
             return;
         }
 
-        if (!backWorkflows.length == 0 && !confirm("This will delete " + currNode.asset_name + " from the back of the following workflows: " + backWorkflows.toString() + "\nContinue?")) {
+        if (!backWorkflows.length === 0 && !confirm("This will delete " + currNode.asset_name + " from the back of the following workflows: " + backWorkflows.toString() + "\nContinue?")) {
             return;
         }
 
-        if (!delWorkflows.length == 0 && !confirm("Since workflows cannot have breaks, this will delete the following workflows: " + delWorkflows.toString() + "\nContinue?")) {
+        if (!delWorkflows.length === 0 && !confirm("Since workflows cannot have breaks, this will delete the following workflows: " + delWorkflows.toString() + "\nContinue?")) {
             return;
         }
 
@@ -2104,7 +2106,7 @@ function createAssetOptions() {
         var delBoundaries = [];
         for (let boundary of Object.keys(boundaries)) {
             if (boundaries[boundary].includes(currNode)) {
-                var assets = boundaries[boundary];
+                let assets = boundaries[boundary];
                 var removedi = assets.indexOf(currNode);
                 assets.splice(removedi, 1);
                 if (checkConnected(assets)) {
@@ -2117,29 +2119,29 @@ function createAssetOptions() {
             }
         }
 
-        if (!editBoundaries.length == 0 && !confirm("This will delete " + currNode.asset_name + " from the following trust boundaries: " + editBoundaries.toString() + "\nContinue?")) {
+        if (!editBoundaries.length === 0 && !confirm("This will delete " + currNode.asset_name + " from the following trust boundaries: " + editBoundaries.toString() + "\nContinue?")) {
             return;
         }
 
-        if (!delBoundaries.length == 0 && !confirm("Since trust boundaries must be connected, this will delete the following boundaries: " + delBoundaries.toString() + "\nContinue?")) {
+        if (!delBoundaries.length === 0 && !confirm("Since trust boundaries must be connected, this will delete the following boundaries: " + delBoundaries.toString() + "\nContinue?")) {
             return;
         }
 
         for (let flow of frontWorkflows) {
-            var components = workflows[flow];
+            let components = workflows[flow];
             components.shift();
         }
         for (let flow of backWorkflows) {
-            var components = workflows[flow];
+            let components = workflows[flow];
             components.pop();
         }
         for (let flow of delWorkflows) {
-            var components = workflows[flow];
+            // let components = workflows[flow];
             delete workflows[flow];
         }
         
         for (let bound of editBoundaries) {
-            var assets = boundaries[bound];
+            let assets = boundaries[bound];
             assets.splice(assets.indexOf(currNode), 1);
             svg.selectAll(".link_group").filter(d => (d.source == currNode && !assets.includes(d.target)) || (d.target == currNode && !assets.includes(d.source))).selectAll(".boundary").filter(function() { return d3.select(this).attr("boundaryName") == bound; }).remove();
 
@@ -2208,7 +2210,7 @@ function newDataflowList(assetID) {
     var dataflow_list = document.createElement('ul');
     dataflow_list.id = "dataflow_button";
     for (let node of nodes) {
-        if (node.id == assetID) {
+        if (node.id === assetID) {
             continue;
         }
         var node_li = document.createElement('li');
@@ -2216,7 +2218,7 @@ function newDataflowList(assetID) {
         node_a.href = "#";
         node_a.innerHTML = node.asset_name;
         node_a.onclick = function() {
-            let dropdowns = document.getElementsByClassName('dropdown');
+            let dropdowns = document.getElementsByClassName('asset_dropdown');
             dropdowns[0].selectedIndex = nodeIndex(assetID) + 1;
             dropdowns[1].selectedIndex = nodes.indexOf(node) + 1;
             addDataFlow();
@@ -2437,7 +2439,7 @@ function updateBoundaryDropdown() {
 // Clears the asset dropdown lists, then regenerates them
 // with the names of every existing element
 function updateAssetDropdowns() {
-    let dropdowns = document.getElementsByClassName('dropdown');
+    let dropdowns = document.getElementsByClassName('asset_dropdown');
 
     while (dropdowns[0].options.length > 0) {
         for (let dropdown of dropdowns) {
@@ -3501,7 +3503,7 @@ function editBoundary(selectedBoundary) {
         }
         var valid = false;
         for (let link of links) {
-            if ((link.source == nodes[selected] && assets.includes(link.target)) || (assets.includes(link.source) && link.target == nodes[selected])) {
+            if ((link.source === nodes[selected] && assets.includes(link.target)) || (assets.includes(link.source) && link.target === nodes[selected])) {
                 valid = true;
             }
         }
@@ -3509,11 +3511,11 @@ function editBoundary(selectedBoundary) {
             alert("There are no dataflows connecting " + nodes[selected].asset_name + " to a node in " + selectedBoundary);
             return;
         }
-        svg.selectAll(".link_group").filter(d => (d.source == nodes[selected] && assets.includes(d.target)) || (d.target == nodes[selected] && assets.includes(d.source))).selectAll(".boundary").filter(function() { return d3.select(this).attr("boundaryName") == selectedBoundary; }).remove();
-        var flow = d3.selectAll(".link_group").filter(d => (d.source == nodes[selected] && !assets.includes(d.target)) || (d.target == nodes[selected] && !assets.includes(d.source)));
+        svg.selectAll(".link_group").filter(d => (d.source === nodes[selected] && assets.includes(d.target)) || (d.target === nodes[selected] && assets.includes(d.source))).selectAll(".boundary").filter(function() { return d3.select(this).attr("boundaryName") === selectedBoundary; }).remove();
+        var flow = d3.selectAll(".link_group").filter(d => (d.source === nodes[selected] && !assets.includes(d.target)) || (d.target === nodes[selected] && !assets.includes(d.source)));
         assets.push(nodes[selected]);
         boundaries[selectedBoundary] = assets;
-        if (nodes[selected].asset_type == "Actor" || nodes[selected].asset_type == "External Entity") {
+        if (nodes[selected].asset_type === "Actor" || nodes[selected].asset_type === "External Entity") {
             nodes[selected].boundaries.push(selectedBoundary);
         }
         appendTrustPath(flow, selectedBoundary, jitter);
@@ -3848,18 +3850,19 @@ function clearDfd() {
 function addThreat() {
     let asset = getDropdownValue("threat_dropdown");
 
-    if (asset == -1) {
+    if (asset === -1) {
         alert("Please select an asset to add a threat to!");
         return;
     }
 
-    let title = document.getElementById("threat_title").value
-    if (title == "") {
+    let title = document.getElementById("threat_title").value;
+    if (title === "") {
         alert("Please add a threat title!");
         return;
     }
-    let cve_num = document.getElementById("threat_number").value
-    let description = document.getElementById("threat_description").value
+    let cve_num = document.getElementById("threat_number").value;
+    let description = document.getElementById("threat_description").value;
+    let stride_class = document.getElementById("stride_category").value;
 
     nodes[asset].threats[1].push({
         "threat_num": cve_num,
@@ -3868,7 +3871,31 @@ function addThreat() {
         "threat_status": "Known",
         "controls": [],
         "findings": null
-    })
+    });
+    // TODO: update model
+    // name = request.POST.get("name")
+    // assets = request.POST.getlist("assets[]")
+    // stride_class = request.POST.get("stride_class")
+    // severity = request.POST.get("severity")
+    // comments = request.POST.get("comments")
+    $.ajax({
+        type: "POST",
+        url: addThreatUrl,
+        data: {
+            name: title,
+            assets: [nodes[asset].asset_name],
+            cve_id: cve_num,
+            stride_class: stride_class,
+            severity: "",  // TODO: add severity functionality
+            description: description,
+        },
+        data_type: "html",
+        success: function(result){
+            if (result !== 200) {
+                alert("Error storing newly created threat. Received: " + result);
+            }
+        },
+    });
 
     alert("New threat (" + title + ") added to " + nodes[asset].asset_name + " successfully!");
 
@@ -3878,8 +3905,8 @@ function addThreat() {
     }
 
     // update list in details bar
-    var options = document.getElementById("options");
-    if (options && options.children[0].value == nodes[asset].id) {
+    let options = document.getElementById("options");
+    if (options && options.children[0].value === nodes[asset].id) {
         nodes[asset].dispatch('click').dispatch('click');
     }
     updateThreatBadges(nodes[asset]);
@@ -3887,7 +3914,7 @@ function addThreat() {
 
 function updateThreatBadges(asset) {
     let node = svg.selectAll(".node_group").filter(d => d === asset);
-    if (asset.threats[0].length == 0) {
+    if (asset.threats[0].length === 0) {
         node.select('.suggest_threat_badge').remove();
         node.select('.num_suggest_threats').remove();
     }
@@ -3921,7 +3948,7 @@ function updateThreatBadges(asset) {
         });
     }
 
-    if (asset.threats[1].length == 0) {
+    if (asset.threats[1].length === 0) {
         node.select('.known_threat_badge').remove();
         node.select('.num_known_threats').remove();
     }
@@ -3961,13 +3988,13 @@ function updateThreatBadges(asset) {
 function addControl() {
     let asset = getDropdownValue("control_dropdown");
 
-    if (asset == -1) {
+    if (asset === -1) {
         alert("Please select an asset to add a control to!");
         return;
     }
 
     let title = document.getElementById("control_title").value
-    if (title == "") {
+    if (title === "") {
         alert("Please add a control title!");
         return;
     }
@@ -3989,7 +4016,7 @@ function addControl() {
 
     // update list in details bar
     var options = document.getElementById("options");
-    if (options && options.children[0].value == nodes[asset].id) {
+    if (options && options.children[0].value === nodes[asset].id) {
         svg.selectAll(".node_group").filter(d => d.id === nodes[asset].id).dispatch('click').dispatch('click');
     }
 }
@@ -4011,7 +4038,7 @@ function getTechImpactValue(impact_name) {
 function saveFinding() {
     let assessor_textbox = document.getElementById("assessor_textbox");
 
-    if (assessor_textbox.value == "") {
+    if (assessor_textbox.value === "") {
         alert("Please add the name of the assessor(s) for this finding!");
         return;
     }
@@ -4037,7 +4064,7 @@ function saveFinding() {
     let notes_textbox = document.getElementById("notes_textbox");
     var checked_boxes = document.querySelectorAll('input[name=control_checkbox]:checked');
 
-    let findings = {
+    nodes[asset_index].threats[threat_index].findings = {
         "status": getDropdownValue("status_dropdown"),
         "controls": checked_boxes,
         "technical_impact": {
@@ -4054,8 +4081,6 @@ function saveFinding() {
         "assessment_date": new Date(),
         "notes": notes_textbox.value,
     }
-
-    nodes[asset_index].threats[threat_index].findings = findings
     console.log(nodes[asset_index].threats[threat_index].findings)
 
     alert("Findings saved!");

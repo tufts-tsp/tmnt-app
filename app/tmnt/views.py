@@ -307,16 +307,18 @@ def edit_boundary(request):
 def add_threat(request):
     name = request.POST.get("name")
     assets = request.POST.getlist("assets[]")
+    cve_id = request.POST.get("cve_id")
     stride_class = request.POST.get("stride_class")
     severity = request.POST.get("severity")
-    comments = request.POST.get("comments")
+    description = request.POST.get("description")
     with transaction.atomic():
-        threat = Threat(name=name, stride_class=stride_class, severity=severity, comments=comments)
-        # threat.save()  # not sure if save is necessary
-        entities = Entity.objects.filter(name__in=assets)
-        threat.assets.set(*entities)
+        threat = Threat(name=name, stride_class=stride_class, cve_id=cve_id, severity=severity, description=description)
         threat.save()
-        ua = UserAction(username='', action=f'create threat', entities=name, details=f'Assets: {assets}; STRIDE: {stride_class}; Severity: {severity}; Comments: {comments}')
+        entities = Entity.objects.filter(name__in=assets)
+        print(entities)
+        threat.assets.add(*entities)
+        threat.save()
+        ua = UserAction(username='', action=f'create threat', entities=name, details=f'Assets: {assets}; STRIDE: {stride_class}; Severity: {severity}; Descr: {description}')
         ua.save()
     return JsonResponse(200, safe=False)
 
