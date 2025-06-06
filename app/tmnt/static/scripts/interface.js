@@ -399,27 +399,33 @@ function loadDfd() {
         data.dataflow.forEach(function(df){
             // console.debug(df.source__name + getNodeIdFromName(df.source__name))
             loadDataFlow(getNodeIdFromName(df.source__name), getNodeIdFromName(df.dest__name), df.name)});
-        // TODO: for each trust boundary in Boundary: 1) select all nodes 2) call createTrustBoundary();
+        // for each trust boundary in Boundary: 1) select all nodes 2) call createTrustBoundary();
         data.boundary.forEach(function(tb){
             console.debug(tb.entities);
-            // TODO: selected = true for each node in entities
+            // selected = true for each node in entities
             tb.entities.forEach(function(ent) {
                 // console.debug(ent)
                 for (let node of nodes) {
-                    console.debug(node.asset_name)
-
                     if (node.asset_name === ent) {
                         node.selected = true;
                     }
                 }
             });
-            console.debug(tb.name)
+            // console.debug("Loading trustBoundary with name: " + tb.name);
             loadTrustBoundary(tb.name);
             // unselect each node before continuing
             for (let node of nodes) {
                 node.selected = false;
             }
         });
+        // load each threat
+        data.threats.forEach(threat => {
+            for (let node of nodes) {
+                node.selected = threat["assets"].includes(node.asset_name);  // select nodes affected by this threat
+            }
+            addThreat(threat["name"], threat["cve_id"], threat["description"], threat["stride_class"]);
+        });
+        // TODO: load each control
     });
 
     simulation.alpha(1.0).restart();
@@ -1930,11 +1936,12 @@ function createAssetOptions() {
                             }
                         }
                     }
+                    deleteThreat(threats[i].threat_title);
                 }
             }
             currNode.threats[1] = known;
             currNode.threats[2] = mitigated;
-            let options = document.getElementById("options")
+            let options = document.getElementById("options");
             options.style.display = "block"; 
             svg.selectAll(".node_group").filter(d => d === currNode).dispatch('click').dispatch('click');
             updateThreatBadges(currNode);
@@ -1946,6 +1953,7 @@ function createAssetOptions() {
     }
     threat_li.appendChild(remove_threat);
     delete_list.appendChild(threat_li);
+    // END deleting threat code
 
     // creating button for deleting controls
     var control_li = document.createElement('li');
@@ -3898,16 +3906,18 @@ function clearDfd() {
 }
 
 // Add a threat to an existing DFD node.
-function addThreat() {
+function addThreat(title, cve_num, description, stride_class) {
     // let asset = getDropdownValue("threat_dropdown");
     let selected_assets = nodes.filter(node => node.selected);
+    const new_threat = title === undefined; // if title is undefined, we are creating a new threat
 
     if (selected_assets.length === 0) {
         alert("Please select an asset to add a threat to!");
         return;
     }
 
-    let title = document.getElementById("threat_title").value;
+    if (title === undefined)
+        title = document.getElementById("threat_title").value;
     if (title === "") {
         alert("Please add a threat title!");
         return;
@@ -3916,9 +3926,12 @@ function addThreat() {
         alert("A threat with that title already exists! Please choose a different title.");
         return;
     }
-    let cve_num = document.getElementById("threat_number").value;
-    let description = document.getElementById("threat_description").value;
-    let stride_class = document.getElementById("stride_category").value;
+    if (cve_num === undefined)
+        cve_num = document.getElementById("threat_number").value;
+    if (description === undefined)
+        description = document.getElementById("threat_description").value;
+    if (stride_class === undefined)
+        stride_class = document.getElementById("stride_category").value;
 
     // add threat to ALL selected assets
     selected_assets.forEach(node => {node.threats[1].push({
@@ -3940,7 +3953,8 @@ function addThreat() {
         "findings": null,
         "assets": selected_assets.map(node => node.asset_name),
     };
-    $.ajax({
+    if (new_threat) {
+        $.ajax({
         type: "POST",
         url: addThreatUrl,
         data: {
@@ -3957,8 +3971,9 @@ function addThreat() {
                 alert("Error storing newly created threat. Received: " + result);
             }
         },
-    });
-
+        });
+    }
+    // TODO: move following line into if(new_threat) block after debugging
     alert("New threat (" + title + ") added to " + selected_assets.map(node => node.asset_name).join(", ") + " successfully!");
 
     let textboxes = document.getElementsByClassName("threat_textbox");
@@ -3976,7 +3991,41 @@ function addThreat() {
     }
 
     // call for all selected assets
-    selected_assets.forEach(node => {updateThreatBadges(node.asset_name)});
+    selected_assets.forEach(node => {
+        updateThreatBadges(node)});
+}
+
+function deleteThreat(threat_name) {
+    let to_delete = threats[threat_name];
+    if (to_delete === undefined) {
+        alert("Threat " + threat_name + " not found!");
+        return;
+    }
+    // remove threat from all assets
+    for (let asset of to_delete.assets) {
+        let node = nodes.find(n => n.asset_name === asset);
+        if (node) {
+            // remove threat from node
+            node.threats[1] = node.threats[1].filter(t => t.threat_title !== threat_name);
+            // remove threat from badge
+            updateThreatBadges(node);
+        }
+    }
+    delete threats[threat_name];  // remove from static threats variable
+    // remove threat from model
+    $.ajax({
+        type: "POST",
+        url: deleteThreatUrl,
+        data: {
+            name: threat_name,
+        },
+        data_type: "html",
+        success: function(result){
+            if (result !== 200) {
+                alert("Error deleting threat. Received: " + result);
+            }
+        },
+        });
 }
 
 function updateThreatBadges(asset) {

@@ -387,9 +387,15 @@ def load_dfd(request):
     boundary = []
     for tb in tbs:
         boundary.append({'name': tb['name'], 'entities': [obj.name for obj in TrustBoundary.objects.get(name=tb['name']).entities.all()]})
+    ts = list(Threat.objects.values('name', 'cve_id', 'stride_class', 'severity', 'description'))
+    threats = []
+    for t in ts:
+        threats.append({'name': t['name'], 'cve_id': t['cve_id'], 'stride_class': t['stride_class'],
+                        'severity': t['severity'], 'description': t['description'], 'assets': [obj.name for obj in Threat.objects.get(name=t['name']).assets.all()]})
     data = {'entity': list(Entity.objects.values()),
             'boundary': boundary,
             'dataflow': list(DataFlow.objects.values('source__name', 'dest__name')),
+            'threats': threats,
             }
     # data = {'assets': list(Actor.objects.values()) + list(Server.objects.values()) + list(Process.objects.values())
     #                   + list(Lambda.objects.values()) + list(TrustBoundary.objects.values()) + list(Datastore.objects.values())
