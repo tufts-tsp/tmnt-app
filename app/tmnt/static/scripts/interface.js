@@ -1,57 +1,91 @@
 // Static variables
-var nodes = [];
-var total_nodes = 0;
-var links = [];
-var workflows = {};
-var boundaries = {};
-var svg;
-var container;
-var simulation;
-var dfd_svg_fraction = 0.72;
+const nodes = [];
+let total_nodes = 0;
+const links = [];
+const workflows = {};
+const boundaries = {};
+let threats = {};
+let svg;
+let container;
+let simulation;
+let dfd_svg_fraction = 0.72;
+
+let multiselect = false;  // toggles whether multiple nodes can be selected
+
+// define an onclick listener for a d3 node that allows the user to select multiple nodes at a time
+
+function showSelectAssets(id) {
+    const text_area = document.getElementById("asset_selection");
+    const done_button = document.getElementById("display_selected_for_threats");
+    const select_assets_button = document.getElementById(id);
+
+    // hide Start selecting button
+    select_assets_button.style.display = "none";
+    // show done selecting button
+    done_button.style.display = "block";
+    // allow multi selection
+    multiselect = true;
+
+}
+
+function displaySelectedAssets() {
+    // Assume selected nodes are tracked with a property `selected: true` in the global `nodes` array
+    if (typeof nodes !== "undefined" && Array.isArray(nodes)) {
+        const selected = nodes.filter(node => node.selected);
+        const assetIds = selected.map(node => node.asset_name).join("\n");
+        document.getElementById("asset_selection").innerText = assetIds || "No assets selected";
+    } else {
+        document.getElementById("asset_selection").innerText = "No assets selected";
+    }
+    multiselect = false;
+    // hide done selecting button and display Start selecting button (if user wants to alter selection)
+    document.getElementById("showSelectedAssets").style.display = "block";
+    document.getElementById("display_selected_for_threats").style.display = "none";
+}
 
 // Hard coded suggested threats and controls
-var threat_suggest = [{
-    "threat_num": 1,
-    "threat_title": "Spoofing",
-    "threat_description": "Pretending to be someone you're not.",
-    "threat_status": "Suggested",
-    "controls": [],
-    "findings": null
-},
-{
-    "threat_num": 2,
-    "threat_title": "Tampering",
-    "threat_description": "Modifying something on disk, network, memory, etc.",
-    "threat_status": "Suggested",
-    "controls": [],
-    "findings": null
-},
-{
-    "threat_num": 3,
-    "threat_title": "Repudiation",
-    "threat_description": "Claiming you didn't do something.",
-    "threat_status": "Suggested",
-    "controls": [],
-    "findings": null
-}];
-var control_suggest = [{
-    "control_title": "Authentication",
-    "control_description": "Authenticate user identities.",
-    "control_status": "Suggested",
-    "threats": []
-},
-{
-    "control_title": "Digital Signatures",
-    "control_description": "Data validation and tamper detection.",
-    "control_status": "Suggested",
-    "threats": []
-},
-{
-    "control_title": "Accountability",
-    "control_description": "Track all system activities.",
-    "control_status": "Suggested",
-    "threats": []
-}];
+// var threat_suggest = [{
+//     "threat_num": 1,
+//     "threat_title": "Spoofing",
+//     "threat_description": "Pretending to be someone you're not.",
+//     "threat_status": "Suggested",
+//     "controls": [],
+//     "findings": null
+// },
+// {
+//     "threat_num": 2,
+//     "threat_title": "Tampering",
+//     "threat_description": "Modifying something on disk, network, memory, etc.",
+//     "threat_status": "Suggested",
+//     "controls": [],
+//     "findings": null
+// },
+// {
+//     "threat_num": 3,
+//     "threat_title": "Repudiation",
+//     "threat_description": "Claiming you didn't do something.",
+//     "threat_status": "Suggested",
+//     "controls": [],
+//     "findings": null
+// }];
+// var control_suggest = [{
+//     "control_title": "Authentication",
+//     "control_description": "Authenticate user identities.",
+//     "control_status": "Suggested",
+//     "threats": []
+// },
+// {
+//     "control_title": "Digital Signatures",
+//     "control_description": "Data validation and tamper detection.",
+//     "control_status": "Suggested",
+//     "threats": []
+// },
+// {
+//     "control_title": "Accountability",
+//     "control_description": "Track all system activities.",
+//     "control_status": "Suggested",
+//     "threats": []
+// }];
     
 
 // Create an SVG on page load
@@ -204,18 +238,18 @@ function showSection(icon) {
     if (icon === "threats") {
         let elems = document.getElementsByClassName('threat_textbox');
         for (let elem of elems) {
-            elem.disabled = (nodes.length == 0);
+            elem.disabled = (nodes.length === 0);
         }
     }
     else if (icon === "controls") {
         let elems = document.getElementsByClassName('controls_textbox');
         for (let elem of elems) {
-            elem.disabled = (nodes.length == 0);
+            elem.disabled = (nodes.length === 0);
         }
     }
     let elems = document.getElementsByClassName('add_button');
     for (let elem of elems) {
-        elem.disabled = (nodes.length == 0);
+        elem.disabled = (nodes.length === 0);
     }
 
     // Recalculate dropdowns when findings tab is opened
@@ -400,8 +434,10 @@ function loadElement(asset_type, asset_name) {
     let rand_y = area.height/2 + Math.random()*5 - 10;
 
     // deep cloning hard coded suggested threats and controls
-    let threats = [[JSON.parse(JSON.stringify(threat_suggest[0])), JSON.parse(JSON.stringify(threat_suggest[1])), JSON.parse(JSON.stringify(threat_suggest[2]))], [], []];
-    let controls = [[JSON.parse(JSON.stringify(control_suggest[0])), JSON.parse(JSON.stringify(control_suggest[1])), JSON.parse(JSON.stringify(control_suggest[2]))], [], []];
+    // let threats = [[JSON.parse(JSON.stringify(threat_suggest[0])), JSON.parse(JSON.stringify(threat_suggest[1])), JSON.parse(JSON.stringify(threat_suggest[2]))], [], []];
+    // let controls = [[JSON.parse(JSON.stringify(control_suggest[0])), JSON.parse(JSON.stringify(control_suggest[1])), JSON.parse(JSON.stringify(control_suggest[2]))], [], []];
+    let threats = [[],[],[]];
+    let controls = [[],[],[]];
     nodes.push({
         "id": total_nodes,
         "asset_type": asset_type,
@@ -568,7 +604,7 @@ function loadElement(asset_type, asset_name) {
 // node, then pushes it to the list of nodes for d3 to draw at a later step.
 function addElement(asset_type) {
     // Make sure no other elements are still in the process of being created
-    if (document.getElementById("asset_info_form").style.display == "block") {
+    if (document.getElementById("asset_info_form").style.display === "block") {
         alert("Finish adding element first!");
         return;
     }
@@ -576,7 +612,7 @@ function addElement(asset_type) {
     // Prompt user for asset name
     let area = d3.select('.dfd_assetview').node().getBoundingClientRect();
 
-    var asset_name = window.prompt("Name this object:", "New " + asset_type);
+    let asset_name = window.prompt("Name this object:", "New " + asset_type);
     if (asset_name == null)
         return;
     
@@ -591,8 +627,10 @@ function addElement(asset_type) {
     let rand_y = area.height/2 + Math.random()*5 - 10;
 
     // deep cloning hard coded suggested threats and controls
-    var threats = [[JSON.parse(JSON.stringify(threat_suggest[0])), JSON.parse(JSON.stringify(threat_suggest[1])), JSON.parse(JSON.stringify(threat_suggest[2]))], [], []];
-    var controls = [[JSON.parse(JSON.stringify(control_suggest[0])), JSON.parse(JSON.stringify(control_suggest[1])), JSON.parse(JSON.stringify(control_suggest[2]))], [], []];
+    // let threats = [[JSON.parse(JSON.stringify(threat_suggest[0])), JSON.parse(JSON.stringify(threat_suggest[1])), JSON.parse(JSON.stringify(threat_suggest[2]))], [], []];
+    // let controls = [[JSON.parse(JSON.stringify(control_suggest[0])), JSON.parse(JSON.stringify(control_suggest[1])), JSON.parse(JSON.stringify(control_suggest[2]))], [], []];
+    let threats = [];
+    let controls = [];
     nodes.push({
         "id": total_nodes,
         "asset_type": asset_type,
@@ -1034,19 +1072,33 @@ function clicked(e) {
     let selected_node = d3.select(this).data()[0]
     let already_selected = selected_node.selected;
 
-    // Unselect all nodes
-    for (let node of nodes) {
-        node.selected = false;
+    // If multiselect is enabled, allow multiple nodes to be selected
+    if (!multiselect) {
+        // Deselect all nodes except the clicked one
+        nodes.forEach(node => node.selected = false);
+        d3.selectAll(".asset")
+            .style("stroke", "black")
+            .style("stroke-width", "1");
     }
-    d3.selectAll(".asset")
-        .style("stroke", "black")
-        .style("stroke-width", "1");
+
+    // Unselect all nodes
+    // for (let node of nodes) {
+    //     node.selected = false;
+    // }
+    // d3.selectAll(".asset")
+    //     .style("stroke", "black")
+    //     .style("stroke-width", "1");
         
     // Reselect the clicked on node
+    // if a selected node is clicked again, it will be unselected
     selected_node.selected = !already_selected;
 
     // Unselect if already clicked
     if (already_selected) {
+        // reset the stroke and width of the node to show it is unselected
+        d3.select(this).selectAll(".asset")
+            .style("stroke", "black")
+            .style("stroke-width", "1");
         resetBottomBar();
         return;
     }
@@ -1056,7 +1108,7 @@ function clicked(e) {
         .style("stroke", "#3E8EDE")
         .style("stroke-width", "4");
 
-    bottom_bar_html =
+    let bottom_bar_html =
         "<ul class=\"options\" id=\"options\"><li value=\"" + selected_node.id + "\"><a href=\"#\">Options &#9662;</a><ul></ul></li></ul>" + 
         "<h2>" + selected_node.asset_name + "</h2>" + 
         selected_node.asset_type +
@@ -1794,7 +1846,7 @@ function createAssetOptions() {
     view_boundary.href = "#";
     view_boundary.innerHTML = "View trust boundary...";
     view_boundary.onclick = function() {
-        var has_boundaries = false;
+        let has_boundaries = false;
         for (let assets of Object.values(boundaries)) {
             if (assets.includes(currNode)) {
                 has_boundaries = true;
@@ -2659,13 +2711,12 @@ function updateFindings() {
         document.querySelector("input[name=\"radio_nonrepudiation\"][value=\"" + findings.technical_impact.nonrepudiation + "\"]").checked = true;
         document.querySelector("input[name=\"radio_authorization\"][value=\"" + findings.technical_impact.authorization + "\"]").checked = true;
 
-        checked_boxes = findings.controls
+        checked_boxes = findings.controls;
         for (i = 0; i < checked_boxes.length; ++i) {
            control = document.getElementById(checked_boxes[i].id)
            control.checked = "checked";
         }
     }
-
 }
 
 // Adds a dataflow loaded from database
@@ -3780,7 +3831,7 @@ function checkConnected(assets) {
             }
         }
     }
-    return visited.length == assets.length;
+    return visited.length === assets.length;
 }
 
 // Helper function to find the coordinates of the trust boundary in 
@@ -3848,9 +3899,10 @@ function clearDfd() {
 
 // Add a threat to an existing DFD node.
 function addThreat() {
-    let asset = getDropdownValue("threat_dropdown");
+    // let asset = getDropdownValue("threat_dropdown");
+    let selected_assets = nodes.filter(node => node.selected);
 
-    if (asset === -1) {
+    if (selected_assets.length === 0) {
         alert("Please select an asset to add a threat to!");
         return;
     }
@@ -3860,30 +3912,40 @@ function addThreat() {
         alert("Please add a threat title!");
         return;
     }
+    else if (title in threats) {
+        alert("A threat with that title already exists! Please choose a different title.");
+        return;
+    }
     let cve_num = document.getElementById("threat_number").value;
     let description = document.getElementById("threat_description").value;
     let stride_class = document.getElementById("stride_category").value;
 
-    nodes[asset].threats[1].push({
+    // add threat to ALL selected assets
+    selected_assets.forEach(node => {node.threats[1].push({
         "threat_num": cve_num,
         "threat_title": title,
         "threat_description": description,
         "threat_status": "Known",
         "controls": [],
         "findings": null
-    });
-    // TODO: update model
-    // name = request.POST.get("name")
-    // assets = request.POST.getlist("assets[]")
-    // stride_class = request.POST.get("stride_class")
-    // severity = request.POST.get("severity")
-    // comments = request.POST.get("comments")
+    })});
+    // add threat to new threat array
+    // "title" should be unique since it is the key in the model
+    threats[title] = {
+        "threat_num": cve_num,
+        "threat_title": title,
+        "threat_description": description,
+        "threat_status": "Known",
+        "controls": [],
+        "findings": null,
+        "assets": selected_assets.map(node => node.asset_name),
+    };
     $.ajax({
         type: "POST",
         url: addThreatUrl,
         data: {
             name: title,
-            assets: [nodes[asset].asset_name],
+            assets: selected_assets.map(node => node.asset_name),
             cve_id: cve_num,
             stride_class: stride_class,
             severity: "",  // TODO: add severity functionality
@@ -3897,7 +3959,7 @@ function addThreat() {
         },
     });
 
-    alert("New threat (" + title + ") added to " + nodes[asset].asset_name + " successfully!");
+    alert("New threat (" + title + ") added to " + selected_assets.map(node => node.asset_name).join(", ") + " successfully!");
 
     let textboxes = document.getElementsByClassName("threat_textbox");
     for (let textbox of textboxes) {
@@ -3906,10 +3968,15 @@ function addThreat() {
 
     // update list in details bar
     let options = document.getElementById("options");
-    if (options && options.children[0].value === nodes[asset].id) {
-        nodes[asset].dispatch('click').dispatch('click');
+    // tbh idk what this block does, but I don't wany anything to break
+    for (let node of selected_assets) {
+        if (options && options.children[0].value === node.id) {
+            node.dispatch('click').dispatch('click');
+        }
     }
-    updateThreatBadges(nodes[asset]);
+
+    // call for all selected assets
+    selected_assets.forEach(node => {updateThreatBadges(node.asset_name)});
 }
 
 function updateThreatBadges(asset) {

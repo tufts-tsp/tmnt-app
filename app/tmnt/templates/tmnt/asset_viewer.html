@@ -110,9 +110,12 @@
 
             <h3>Threats</h3>
             <div>
-            <label for="threat_dropdown">Add to asset:</label>
-            <select name="threat_dropdown" id="threat_dropdown" class="dropdown asset_dropdown" onchange="showSuggestedThreats()" disabled>
-                <option value="invalid">Add an asset first!</option>
+                <div id="asset_selection"></div>
+                <button type="button" class="add_button" id="showSelectedAssets" onclick="showSelectAssets('showSelectedAssets')">Select Assets</button>
+                <button type="button" class="add_button" id="display_selected_for_threats" onclick="displaySelectedAssets()" style="display:none">Show Selected Asset IDs</button>
+{#            <label for="threat_dropdown">Add to asset:</label>#}
+{#            <select name="threat_dropdown" id="threat_dropdown" class="dropdown asset_dropdown" onchange="showSuggestedThreats()" disabled>#}
+{#                <option value="invalid">Add an asset first!</option>#}
             </select>
 
             <br>
@@ -263,7 +266,7 @@
              <b>Notes:</b><br><textarea class="notes_textbox" id="notes_textbox" name="notes_textbox" placeholder="(Optional) Add Notes..."rows="4" cols="20"></textarea><br>
 
              <br>
-             <button type="button" class="add_button" onclick="saveFinding()">Save</button disabled>
+             <button type="button" class="add_button" onclick="saveFinding()">Save</button>
             </div>
         </div>
     </div>
