@@ -276,7 +276,7 @@ function showSuggestedThreats() {
     while (dropdown.options.length > 0) {
         dropdown.remove(0);
     }
-    if (nodes[node_id].threats[0].length == 0) {
+    if (nodes[node_id].threats[0].length === 0) {
         dropdown.disabled = true;
         dropdown.add(new Option("No suggested threats for this asset", -1));
     }
@@ -423,9 +423,17 @@ function loadDfd() {
             for (let node of nodes) {
                 node.selected = threat["assets"].includes(node.asset_name);  // select nodes affected by this threat
             }
-            addThreat(threat["name"], threat["cve_id"], threat["description"], threat["stride_class"]);
+            addThreat(threat["name"], threat["cve_id"], threat["description"], threat["stride_class"], threat["mitigated"]);
         });
-        // TODO: load each control
+        // load each control
+        data.controls.forEach(control => {
+            for (let node of nodes) {
+                node.selected = control["assets"].includes(node.asset_name);  // select nodes affected by this control
+            }
+            let asset_name = control["assets"][0];  // currently assumes one asset per control, change if multiple assets are supported
+            console.log('asset_name: ' + asset_name);
+            addControl(asset_name, control["name"], control["description"], control["mitigated"]);
+        });
     });
 
     simulation.alpha(1.0).restart();
@@ -635,8 +643,8 @@ function addElement(asset_type) {
     // deep cloning hard coded suggested threats and controls
     // let threats = [[JSON.parse(JSON.stringify(threat_suggest[0])), JSON.parse(JSON.stringify(threat_suggest[1])), JSON.parse(JSON.stringify(threat_suggest[2]))], [], []];
     // let controls = [[JSON.parse(JSON.stringify(control_suggest[0])), JSON.parse(JSON.stringify(control_suggest[1])), JSON.parse(JSON.stringify(control_suggest[2]))], [], []];
-    let threats = [];
-    let controls = [];
+    let threats = [[], [], []];
+    let controls = [[], [], []];
     nodes.push({
         "id": total_nodes,
         "asset_type": asset_type,
@@ -649,7 +657,7 @@ function addElement(asset_type) {
     })
     total_nodes++;
 
-    if (asset_type == "Actor" || asset_type == "External Entity") {
+    if (asset_type === "Actor" || asset_type === "External Entity") {
         nodes[nodes.length - 1].boundaries = [];
     }
 
@@ -1358,12 +1366,12 @@ function deleteBoundary(boundary_name) {
 }
 
 function associateBoundary(node) {
-    var boundary_names = Object.keys(boundaries);
-    var display = document.getElementById("display_associated");
-    var dropdown = document.getElementById("associate_trust");
-    var done = document.getElementById("done_associate");
+    const boundary_names = Object.keys(boundaries);
+    const display = document.getElementById("display_associated");
+    const dropdown = document.getElementById("associate_trust");
+    const done = document.getElementById("done_associate");
     updateBoundaryDropdown();
-    if (node.boundaries.length == boundary_names.length) {
+    if (node.boundaries.length === boundary_names.length) {
         display.disabled = true;
         dropdown.disabled = true;
         done.onclick = function () {
@@ -1371,28 +1379,26 @@ function associateBoundary(node) {
         }
         return;
     }
-    var dropdown = document.getElementById("associate_trust");
     for (let i = Object.keys(boundaries).length - 1; i >= 0; i--) {
         if (node.boundaries.includes(boundary_names[i])) {
             dropdown.remove(i + 1);
         }
     }
-    
     done.onclick = function () {
         let select = document.getElementById("associate_trust");
-        if (select.value == -1) {
+        if (select.value === -1) {
             alert("Please select an associated trust boundary!");
             return;
         }
-        var boundary_name = select.options[select.selectedIndex].text;
-        var assets = boundaries[boundary_name];
+        const boundary_name = select.options[select.selectedIndex].text;
+        const assets = boundaries[boundary_name];
         assets.push(node);
         if (!checkConnected(assets)) {
             alert("There are no dataflows connecting " + node.asset_name + " to a node in " + boundary_name);
             assets.pop();
             return;
         }
-        if (node.boundaries.length == 0) {
+        if (node.boundaries.length === 0) {
             display.innerHTML = "";
         }
         else {
@@ -1400,7 +1406,7 @@ function associateBoundary(node) {
         }
         node.boundaries.push(boundary_name);
         display.innerHTML += "<span style=\"cursor: pointer\" class=\"assoc_bound\">" + boundary_name + "</span>";
-        var assocs = document.getElementsByClassName("assoc_bound");
+        const assocs = document.getElementsByClassName("assoc_bound");
         for (let i = 0; i < assocs.length; i++) {
             assocs[i].onclick = function() {
                 resetBottomBar();
@@ -1411,11 +1417,11 @@ function associateBoundary(node) {
         associateBoundary(node);
 
         svg.selectAll(".link_group").filter(d => (d.source === node && assets.includes(d.target)) || (d.target === node && assets.includes(d.source))).selectAll(".boundary").filter(function() { return d3.select(this).attr("boundaryName") === boundary_name; }).remove();
-        var flow = d3.selectAll(".link_group").filter(d => (assets.includes(d.source) && !assets.includes(d.target)) || (assets.includes(d.target) && !assets.includes(d.source)));
+        const flow = d3.selectAll(".link_group").filter(d => (assets.includes(d.source) && !assets.includes(d.target)) || (assets.includes(d.target) && !assets.includes(d.source)));
 
         // If there are inter-trust boundaries, retrieve jitter value, else 
         // generate a new one
-        var jitter; 
+        let jitter;
         if (d3.selectAll(".boundary").filter(function() {return d3.select(this).attr("boundaryName") === boundary_name;}).empty()) {
             jitter = (Math.random() * 0.3) + 0.1;
         }
@@ -1424,15 +1430,33 @@ function associateBoundary(node) {
                 return d3.select(this).attr("boundaryName") === boundary_name;
             }).attr("jitter");
         }
-
         appendTrustPath(flow, boundary_name, jitter);
     }
+}
+
+function assocThreatAndControl(threat_name, control_name, disassociate = false) {
+    // Associate threat and control in the model
+    console.log('Received threat and control:', threat_name, control_name, disassociate);
+    const change_type = disassociate ? "disassoc threat" : "assoc threat";
+    $.ajax({
+        type: "POST",
+        url: editControlUrl,
+        data: {
+            change: change_type,
+            threat_name: threat_name,
+            control_name: control_name,
+        },
+        dataType: "html",
+        // success: function(result){
+        //     alert("Success");
+        // },
+    });
 }
 
 // Displays threat information and allows users to either make changes to 
 // the threat
 function displayThreat(node, status, threat) {
-    var bottom_bar = document.getElementById("bottom_bar");
+    const bottom_bar = document.getElementById("bottom_bar");
     bottom_bar.innerHTML = "<h2>" + threat.threat_title + " ("+ threat.threat_num + ")</h2>" + node.asset_name + " | " + threat.threat_status + " Threat<br>";
     if (threat.threat_description !== "") {
         bottom_bar.innerHTML += "<br><h3>Description</h3>&emsp;&emsp;" + threat.threat_description + "<br>";
@@ -1479,11 +1503,12 @@ function displayThreat(node, status, threat) {
                     editAssignedControls(node, threat);
                 }
             }, 0);
+            break;
         // if displaying a known threat
         case 1: 
             bottom_bar.innerHTML += "<br><span>Assign a control: </span><select id=\"assign_control\" disabled><option value=\"invalid\">Add more controls first!</option></select><button id=\"mitigate_threat\" disabled>+</button><br>";
-            var dropdown = document.getElementById("assign_control");
-            var button = document.getElementById("mitigate_threat");
+            const dropdown = document.getElementById("assign_control");
+            const button = document.getElementById("mitigate_threat");
             var controls = [].concat(node.controls[1], node.controls[2]).filter((c) => !threat.controls.includes(c));
             if (controls.length > 0) {
                 dropdown.disabled = false;
@@ -1496,7 +1521,6 @@ function displayThreat(node, status, threat) {
                 }
             }
             setTimeout(function() {
-                button = document.getElementById("mitigate_threat");
                 button.onclick = function () {
                     let selected = getDropdownValue("assign_control")
                     if (selected === -1) {
@@ -1517,6 +1541,9 @@ function displayThreat(node, status, threat) {
                         node.controls[2].push(controls[selected]);
                     }
                     displayThreat(node, 2, threat);
+                    // update model
+                    console.log(threat.threat_title, controls[selected].control_title);
+                    assocThreatAndControl(threat.threat_title, controls[selected].control_title);
                 };
             }, 0);
             break;
@@ -1554,6 +1581,9 @@ function editAssignedControls(node, threat) {
                 }
                 threat.controls.splice(i, 1);
                 control.threats.splice(control.threats.indexOf(threat), 1);
+                // TODO: update model
+                console.debug(threat.threat_title, control.control_title);
+                assocThreatAndControl(threat.threat_title, control.control_title, true);
                 
                 // Check if control is no longer mitigated
                 if (control.threats.length === 0) {
@@ -1563,7 +1593,7 @@ function editAssignedControls(node, threat) {
                 }
 
                 // Check if threat is no longer mitigated
-                if (threat.controls.length == 0) {
+                if (threat.controls.length === 0) {
                     node.threats[2].splice(node.threats[2].indexOf(threat), 1);
                     threat.threat_status = "Known";
                     node.threats[1].push(threat);
@@ -1572,7 +1602,7 @@ function editAssignedControls(node, threat) {
                 }
 
                 // Reset threat display depending on status
-                if (status == 2) { 
+                if (status === 2) {
                     document.getElementById("done_edit").remove();
                     editAssignedControls(node, threat); 
                 }
@@ -1659,7 +1689,7 @@ function displayControl(node, status, control) {
                 button = document.getElementById("mitigate_threat");
                 button.onclick = function() {
                     var selected = getDropdownValue("assign_control");
-                    if (selected == -1) {
+                    if (selected === -1) {
                         alert("Please select a threat to be mitigated by " + control.control_title + "!");
                         return;
                     }
@@ -1676,6 +1706,7 @@ function displayControl(node, status, control) {
                         node.threats[2].push(threats[selected]);
                         updateThreatBadges(node);
                     }
+                    assocThreatAndControl(threats[selected].threat_title, control.control_title);
                     displayControl(node, 2, control);
                 };
             }, 0);
@@ -1712,6 +1743,8 @@ function editAssignedThreats(node, control) {
                 }
                 control.threats.splice(i, 1);
                 threat.controls.splice(threat.controls.indexOf(control), 1);
+                // TODO: update model
+                assocThreatAndControl(threat.threat_title, control.control_title, true);
                 
                 // Check if threat is no longer mitigated
                 if (threat.controls.length === 0) {
@@ -1915,7 +1948,7 @@ function createAssetOptions() {
         submit.onclick = function () {
             var known = currNode.threats[1];
             var mitigated = currNode.threats[2];
-            var flow_checks = document.getElementsByClassName("flowChecks");
+            const flow_checks = document.getElementsByClassName("flowChecks");
             for (let i = flow_checks.length - 1; i >= 0; i--) {
                 if (flow_checks[i].checked) {
                     if (threats[i].threat_status === "Known") {
@@ -1993,16 +2026,17 @@ function createAssetOptions() {
         var submit = document.createElement("button");
         submit.innerHTML = "Done"
         var bar = document.getElementById("bottom_bar");
+        // delete the control
         submit.onclick = function () {
-            var known = currNode.controls[1];
-            var mitigated = currNode.controls[2];
-            var flow_checks = document.getElementsByClassName("flowChecks");
+            let known = currNode.controls[1];
+            let mitigated = currNode.controls[2];
+            const flow_checks = document.getElementsByClassName("flowChecks");
             for (let i = flow_checks.length - 1; i >= 0; i--) {
                 if (flow_checks[i].checked) {
-                    if (controls[i].control_status === "Known") {
+                    if (controls[i].control_status === "Known") {  // remove from known controls
                         known.splice(known.indexOf(controls[i]), 1);
                     }
-                    else if (controls[i].control_status === "Mitigated") {
+                    else if (controls[i].control_status === "Mitigated") {  // mark associated threats as Known if they have no other controls
                         mitigated.splice(mitigated.indexOf(controls[i]), 1);
                         // checking mitigated threats with deleted control
                         var threats = currNode.threats[2];
@@ -2010,13 +2044,22 @@ function createAssetOptions() {
                             if (threats[j].controls.includes(controls[i])) {
                                 threats[j].controls.splice(threats[j].controls.indexOf(controls[i]), 1);
                                 if (threats[j].controls.length === 0) {
-                                    threats[j].threat_status === "Known";
+                                    threats[j].threat_status = "Known";
                                     currNode.threats[1].push(threats[j]);
                                     threats.splice(j, 1);
                                 }
                             }
                         }
                     }
+                    $.ajax({  // update model
+                        type: "POST",
+                        url: deleteControlUrl,
+                        data: {name: controls[i].control_title,},
+                        data_type: "html",
+                        success: function(result){
+                            if (result !== 200) {alert("Error deleting control. Received: " + result);}
+                        },
+                    });
                 }
             }
             currNode.controls[1] = known;
@@ -2035,7 +2078,7 @@ function createAssetOptions() {
     delete_list.appendChild(control_li);
 
     // creating button for deleting dataflows
-    flow_li = document.createElement('li');
+    const flow_li = document.createElement('li');
     var remove_flow = document.createElement('a');
     remove_flow.href = "#";
     remove_flow.innerHTML = "Dataflow...";
@@ -2149,15 +2192,15 @@ function createAssetOptions() {
                 }
             }
         }
-        if (!frontWorkflows.length === 0 && !confirm("This will delete " + currNode.asset_name + " from the front of the following workflows: " + frontWorkflows.toString() + "\nContinue?")) {
+        if (frontWorkflows.length !== 0 && !confirm("This will delete " + currNode.asset_name + " from the front of the following workflows: " + frontWorkflows.toString() + "\nContinue?")) {
             return;
         }
 
-        if (!backWorkflows.length === 0 && !confirm("This will delete " + currNode.asset_name + " from the back of the following workflows: " + backWorkflows.toString() + "\nContinue?")) {
+        if (backWorkflows.length !== 0 && !confirm("This will delete " + currNode.asset_name + " from the back of the following workflows: " + backWorkflows.toString() + "\nContinue?")) {
             return;
         }
 
-        if (!delWorkflows.length === 0 && !confirm("Since workflows cannot have breaks, this will delete the following workflows: " + delWorkflows.toString() + "\nContinue?")) {
+        if (delWorkflows.length !== 0 && !confirm("Since workflows cannot have breaks, this will delete the following workflows: " + delWorkflows.toString() + "\nContinue?")) {
             return;
         }
 
@@ -3900,13 +3943,13 @@ function clearDfd() {
         data_type: "html",
         success: function(result){
             alert("Deleted all assets.");
+            window.location.reload(true);
         },
     });
-    // TODO: Call function to clear the page
 }
 
 // Add a threat to an existing DFD node.
-function addThreat(title, cve_num, description, stride_class) {
+function addThreat(title, cve_num, description, stride_class, mitigated = false) {
     // let asset = getDropdownValue("threat_dropdown");
     let selected_assets = nodes.filter(node => node.selected);
     const new_threat = title === undefined; // if title is undefined, we are creating a new threat
@@ -3934,7 +3977,7 @@ function addThreat(title, cve_num, description, stride_class) {
         stride_class = document.getElementById("stride_category").value;
 
     // add threat to ALL selected assets
-    selected_assets.forEach(node => {node.threats[1].push({
+    selected_assets.forEach(node => {node.threats[mitigated ? 2 : 1].push({
         "threat_num": cve_num,
         "threat_title": title,
         "threat_description": description,
@@ -3986,7 +4029,7 @@ function addThreat(title, cve_num, description, stride_class) {
     // tbh idk what this block does, but I don't wany anything to break
     for (let node of selected_assets) {
         if (options && options.children[0].value === node.id) {
-            node.dispatch('click').dispatch('click');
+            svg.selectAll(".node_group").filter(d => d.id === node.id).dispatch('dblclick');
         }
     }
 
@@ -4101,27 +4144,52 @@ function updateThreatBadges(asset) {
 
 // Add a control to an existing DFD node.
 // TODO: maybe merge this with addThreat()?
-function addControl() {
-    let asset = getDropdownValue("control_dropdown");
-
-    if (asset === -1) {
-        alert("Please select an asset to add a control to!");
-        return;
+function addControl(asset_name = "", control_title = "", control_description = "", mitigated = false) {
+    const new_control = asset_name === "";
+    let asset;
+    let description;
+    if (new_control) {
+        asset = getDropdownValue("control_dropdown");
+        if (asset === -1) {
+            alert("Please select an asset to add a control to!");
+            return;
+        }
+        description = document.getElementById("control_description").value;
+    }
+    else {
+        asset = getNodeIdFromName(asset_name);
+        description = control_description;
     }
 
-    let title = document.getElementById("control_title").value
+    let title = new_control ? document.getElementById("control_title").value : control_title;
     if (title === "") {
         alert("Please add a control title!");
         return;
     }
-    let description = document.getElementById("control_description").value
 
-    nodes[asset].controls.push({
+    nodes[asset].controls[mitigated ? 2:1].push({
         "control_title": title,
         "control_description": description,
         "control_status": "Known",
         "threats": []
-    })
+    });
+    if (new_control) {
+        $.ajax({
+            type: "POST",
+            url: addControlUrl,
+            data: {
+                name: title,
+                assets: [nodes[asset].asset_name],
+                description: description,
+            },
+            data_type: "html",
+            success: function(result){
+                if (result !== 200) {
+                    alert("Error storing newly created control. Received: " + result);
+                }
+            },
+        });
+    }
 
     alert("New control (" + title + ") added to " + nodes[asset].asset_name + " successfully!");
 
@@ -4131,7 +4199,7 @@ function addControl() {
     }
 
     // update list in details bar
-    var options = document.getElementById("options");
+    let options = document.getElementById("options");
     if (options && options.children[0].value === nodes[asset].id) {
         svg.selectAll(".node_group").filter(d => d.id === nodes[asset].id).dispatch('click').dispatch('click');
     }

@@ -267,6 +267,7 @@ def delete_all_assets(request):
     ExtAsset.objects.all().delete()
     Assumption.objects.all().delete()
     Threat.objects.all().delete()
+    Control.objects.all().delete()
     Workflow.objects.all().delete()
     return JsonResponse(200, safe=False)
 
@@ -372,34 +373,81 @@ def delete_assumption(request):
         ua.save()
     return JsonResponse(200, safe=False)
 
+def add_control(request):
+    name = request.POST.get("name")
+    description = request.POST.get("description")
+    assets = request.POST.getlist("assets[]")
+    with transaction.atomic():
+        control = Control(name=name, description=description)
+        control.save()
+        assets = Entity.objects.filter(name__in=assets)
+        print('add_control received assets:', len(assets), assets)
+        control.assets.add(*assets)
+        control.save()
+        ua = UserAction(username='', action=f'create control', entities=name, details=f'Assets: {assets}; Description: {description}')
+        ua.save()
+    return JsonResponse(200, safe=False)
+
+def edit_control(request):
+    change = request.POST.get("change")  # e.g., "name", "description", "assets"
+    if change == "assoc threat":
+        # associate control with threat
+        return associate_control_with_threat(request)
+    elif change == "disassoc threat":
+        return associate_control_with_threat(request, True)
+    return JsonResponse(501, safe=False)
+
+def delete_control(request):
+    name = request.POST.get("name")
+    control = Control.objects.get(name=name)
+    with transaction.atomic():
+        control.delete()
+        ua = UserAction(username='', action=f'delete control', entities=name)
+        ua.save()
+    return JsonResponse(200, safe=False)
+
+def associate_control_with_threat(request, dissociate=False):
+    threat_name = request.POST.get("threat_name")
+    control_name = request.POST.get("control_name")
+    print(f'associate_control_with_threat received threat: {threat_name}, control: {control_name}, dissociate: {dissociate}')
+    threat = Threat.objects.get(name=threat_name)
+    control = Control.objects.get(name=control_name)
+    with transaction.atomic():
+        if dissociate:
+            control.threats.remove(threat)
+            control.save()
+            ua = UserAction(username='', action=f'dissociate control from threat', entities=control_name, details=f'Threat: {threat_name}')
+            ua.save()
+        else:
+            control.threats.add(threat)
+            control.save()
+            ua = UserAction(username='', action=f'associate control with threat', entities=control_name, details=f'Threat: {threat_name}')
+            ua.save()
+    return JsonResponse(200, safe=False)
+
+
 def load_dfd(request):
-    # TODO: grab all entities; should not be necessary to grab add'l info for Datastore or Actor
-    # data = {'actor' : list(Actor.objects.values()),
-    #         'server': list(Server.objects.values()),
-    #         'process': list(Process.objects.values()),
-    #         'lambda': list(Lambda.objects.values()),
-    #         'trustboundary': list(TrustBoundary.objects.values()),
-    #         'datastore': list(Datastore.objects.values()),
-    #         'extasset': list(ExtAsset.objects.values()),
-    #         'dataflow': list(DataFlow.objects.values()),
-    #         }
-    tbs = list(TrustBoundary.objects.values('name'))
     boundary = []
-    for tb in tbs:
+    for tb in list(TrustBoundary.objects.values('name')):
         boundary.append({'name': tb['name'], 'entities': [obj.name for obj in TrustBoundary.objects.get(name=tb['name']).entities.all()]})
-    ts = list(Threat.objects.values('name', 'cve_id', 'stride_class', 'severity', 'description'))
     threats = []
-    for t in ts:
+    for t in list(Threat.objects.values('name', 'cve_id', 'stride_class', 'severity', 'description')):
+        mitigated = Control.objects.filter(threats__id=Threat.objects.get(name=t['name']).id).exists()
+        print(f'Threat {t["name"]} mitigated: {mitigated}')
         threats.append({'name': t['name'], 'cve_id': t['cve_id'], 'stride_class': t['stride_class'],
-                        'severity': t['severity'], 'description': t['description'], 'assets': [obj.name for obj in Threat.objects.get(name=t['name']).assets.all()]})
+                        'severity': t['severity'], 'description': t['description'], 'assets':
+                            [obj.name for obj in Threat.objects.get(name=t['name']).assets.all()], 'mitigated': mitigated})
+    controls = []
+    for c in list(Control.objects.values('name', 'description')):
+        control_assets = [obj.name for obj in Control.objects.get(name=c['name']).assets.all()]
+        # check if the control has any associated threats
+        mitigated = Control.objects.get(name=c['name']).threats.exists()
+        controls.append({'name': c['name'], 'description': c['description'], 'assets': control_assets, 'mitigated': mitigated})
     data = {'entity': list(Entity.objects.values()),
             'boundary': boundary,
             'dataflow': list(DataFlow.objects.values('source__name', 'dest__name')),
             'threats': threats,
+            'controls': controls,
+            'assumptions': [], #list(Assumption.objects.values('name', 'comments', 'assets__name', 'threats__name')),
             }
-    # data = {'assets': list(Actor.objects.values()) + list(Server.objects.values()) + list(Process.objects.values())
-    #                   + list(Lambda.objects.values()) + list(TrustBoundary.objects.values()) + list(Datastore.objects.values())
-    #                   + list(ExtAsset.objects.values()),
-    #         'dataflows': list(DataFlow.objects.values()),
-    #         }
     return JsonResponse(data, safe=False)

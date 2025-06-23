@@ -62,6 +62,12 @@ class Assumption(models.Model):
     assets = models.ManyToManyField(Entity)
     threats = models.ManyToManyField(Threat)
 
+class Control(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True)
+    threats = models.ManyToManyField(Threat)
+    assets = models.ManyToManyField(Entity)
+
 class Workflow(models.Model):
     name = models.CharField(max_length=100, unique=True)
 
