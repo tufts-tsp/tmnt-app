@@ -68,6 +68,11 @@ class Control(models.Model):
     threats = models.ManyToManyField(Threat)
     assets = models.ManyToManyField(Entity)
 
+class MitigatedThreat(models.Model):
+    asset = models.ForeignKey(Entity, on_delete=models.CASCADE, related_name='asset')
+    threat = models.ForeignKey(Threat, on_delete=models.CASCADE, related_name='threat')
+    control = models.ForeignKey(Control, on_delete=models.CASCADE, related_name='control')
+
 class Workflow(models.Model):
     name = models.CharField(max_length=100, unique=True)
 

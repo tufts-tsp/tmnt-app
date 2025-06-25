@@ -409,19 +409,25 @@ def delete_control(request):
 def associate_control_with_threat(request, dissociate=False):
     threat_name = request.POST.get("threat_name")
     control_name = request.POST.get("control_name")
+    asset_name = request.POST.get("asset_name")
     print(f'associate_control_with_threat received threat: {threat_name}, control: {control_name}, dissociate: {dissociate}')
     threat = Threat.objects.get(name=threat_name)
     control = Control.objects.get(name=control_name)
+    asset = Entity.objects.get(name=asset_name)
     with transaction.atomic():
         if dissociate:
+            mt = MitigatedThreat.objects.get(asset=asset, control=control, threat=threat)
+            mt.delete()
             control.threats.remove(threat)
             control.save()
-            ua = UserAction(username='', action=f'dissociate control from threat', entities=control_name, details=f'Threat: {threat_name}')
+            ua = UserAction(username='', action=f'dissociate control from threat', entities=control_name, details=f'Threat: {threat_name}; Asset: {asset_name}')
             ua.save()
         else:
+            mt = MitigatedThreat(asset=asset, control=control, threat=threat)
+            mt.save()
             control.threats.add(threat)
             control.save()
-            ua = UserAction(username='', action=f'associate control with threat', entities=control_name, details=f'Threat: {threat_name}')
+            ua = UserAction(username='', action=f'associate control with threat', entities=control_name, details=f'Threat: {threat_name}; Asset: {asset_name}')
             ua.save()
     return JsonResponse(200, safe=False)
 
@@ -441,13 +447,17 @@ def load_dfd(request):
     for c in list(Control.objects.values('name', 'description')):
         control_assets = [obj.name for obj in Control.objects.get(name=c['name']).assets.all()]
         # check if the control has any associated threats
-        mitigated = Control.objects.get(name=c['name']).threats.exists()
-        controls.append({'name': c['name'], 'description': c['description'], 'assets': control_assets, 'mitigated': mitigated})
+        # mitigated = Control.objects.get(name=c['name']).threats.exists()
+        # create a list called "mitigated_assets" that contains the names of all assets that are associated with this control stored in models.MitigatedThreat
+        mitigated_assets = list(MitigatedThreat.objects.filter(control__name=c['name']).values_list('asset__name', flat=True))
+        print('mitigated assets:', mitigated_assets)
+        controls.append({'name': c['name'], 'description': c['description'], 'assets': control_assets, 'mitigated_assets': mitigated_assets})
     data = {'entity': list(Entity.objects.values()),
             'boundary': boundary,
             'dataflow': list(DataFlow.objects.values('source__name', 'dest__name')),
             'threats': threats,
             'controls': controls,
+            # 'mitigated_threats': list(MitigatedThreat.objects.values('asset__name', 'threat__name', 'control__name')),
             'assumptions': [], #list(Assumption.objects.values('name', 'comments', 'assets__name', 'threats__name')),
             }
     return JsonResponse(data, safe=False)
