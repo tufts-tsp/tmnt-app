@@ -452,12 +452,13 @@ def load_dfd(request):
         mitigated_assets = list(MitigatedThreat.objects.filter(control__name=c['name']).values_list('asset__name', flat=True))
         print('mitigated assets:', mitigated_assets)
         controls.append({'name': c['name'], 'description': c['description'], 'assets': control_assets, 'mitigated_assets': mitigated_assets})
+    print(list(MitigatedThreat.objects.values('asset__name', 'threat__name', 'control__name')))
     data = {'entity': list(Entity.objects.values()),
             'boundary': boundary,
             'dataflow': list(DataFlow.objects.values('source__name', 'dest__name')),
             'threats': threats,
             'controls': controls,
-            # 'mitigated_threats': list(MitigatedThreat.objects.values('asset__name', 'threat__name', 'control__name')),
+            'mitigated_threats': list(MitigatedThreat.objects.values('asset__name', 'threat__name', 'control__name')),
             'assumptions': [], #list(Assumption.objects.values('name', 'comments', 'assets__name', 'threats__name')),
             }
     return JsonResponse(data, safe=False)

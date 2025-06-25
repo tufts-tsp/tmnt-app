@@ -231,6 +231,7 @@ function showSection(icon) {
         div.style.display = "none";
     });
     document.getElementById(icon).style.display = "block";
+    document.querySelectorAll("div.asset_selection").forEach(div => {div.innerText = "";});  // clear selected assets text
 
     // Prevent user from trying to add a threat or a control if no
     // assets exist yet in the DFD
@@ -262,7 +263,7 @@ function showSection(icon) {
 function showSuggestedThreats() {
     var dropdown = document.getElementById("threat_suggest_dropdown");
     var node_id = getDropdownValue("threat_dropdown");
-    if (node_id == -1) {
+    if (node_id === -1) {
         dropdown.disabled = true;
         dropdown.add(new Option("Select an asset first!", -1));
         return;
@@ -401,7 +402,7 @@ function loadDfd() {
             loadDataFlow(getNodeIdFromName(df.source__name), getNodeIdFromName(df.dest__name), df.name)});
         // for each trust boundary in Boundary: 1) select all nodes 2) call createTrustBoundary();
         data.boundary.forEach(function(tb){
-            console.debug(tb.entities);
+            // console.debug(tb.entities);
             // selected = true for each node in entities
             tb.entities.forEach(function(ent) {
                 // console.debug(ent)
@@ -427,7 +428,7 @@ function loadDfd() {
         });
         // load each control
         data.controls.forEach(control => {
-            // TODO: break into two stages: 1) add this control to mitigated entities, 2) add control to unmitigated entities
+            // break into two stages: 1) add this control to mitigated entities, 2) add control to unmitigated entities
             for (let node of nodes) {
                 node.selected = control["assets"].includes(node.asset_name) && control["mitigated_assets"].includes(node.asset_name);  // select nodes affected by this control
             }
@@ -441,6 +442,17 @@ function loadDfd() {
             if (nodes.filter(node => node.selected).length > 0) {
                 addControl(control["name"], control["description"], false);
             }
+        });
+        data.mitigated_threats.forEach(obj => {
+            // console.debug("Adding mitigated threat " + obj["threat__name"] + " to asset " + obj["asset__name"] + " with control " + obj["control__name"]);
+            // get the node with asset_name
+            const node = nodes.find(n => n.asset_name === obj["asset__name"]);
+            // get the index of threat with threat_name which should be contained in node.threats[2]
+            const index_of_threat = node.threats[2].findIndex(t => t.threat_title === obj["threat__name"]);
+            // get the control with control_name which should be contained in node.controls[2]
+            const index_of_control = node.controls[2].findIndex(c => c.control_title === obj["control__name"]);
+            node.threats[2][index_of_threat].controls.push(node.controls[2][index_of_control]);
+            node.controls[2][index_of_control].threats.push(node.threats[2][index_of_threat]);
         });
     });
 
@@ -1532,7 +1544,7 @@ function displayThreat(node, status, threat) {
             setTimeout(function() {
                 button = document.getElementById("mitigate_threat");  // don't remove this
                 button.onclick = function () {
-                    let selected = getDropdownValue("assign_control")
+                    let selected = getDropdownValue("assign_control");
                     if (selected === -1) {
                         alert("Please select a control to assign to " + threat.threat_title + "!");
                         return;
@@ -4170,7 +4182,6 @@ function addControl(control_title, control_description, mitigated = false) {
     //     return;
     // }
     // add threat to ALL selected assets
-    // TODO: add functionality to define selected_assets
     selected_assets.forEach(node => {node.controls[mitigated ? 2 : 1].push({
         "control_title": title,
         "control_description": description,
@@ -4211,11 +4222,10 @@ function addControl(control_title, control_description, mitigated = false) {
     for (let textbox of textboxes) {
         textbox.value = "";
     }
-
     const options = document.getElementById("options");
     for (let node of selected_assets) {
         if (options && options.children[0].value === node.id) {
-            svg.selectAll(".node_group").filter(d => d.id === node.id).dispatch('dblclick');
+            svg.selectAll(".node_group").filter(d => d.id === node.id).dispatch('click').dispatch('click');
         }
     }
 }
