@@ -402,17 +402,12 @@ function loadDfd() {
             loadDataFlow(getNodeIdFromName(df.source__name), getNodeIdFromName(df.dest__name), df.name)});
         // for each trust boundary in Boundary: 1) select all nodes 2) call createTrustBoundary();
         data.boundary.forEach(function(tb){
-            // console.debug(tb.entities);
             // selected = true for each node in entities
             tb.entities.forEach(function(ent) {
-                // console.debug(ent)
                 for (let node of nodes) {
-                    if (node.asset_name === ent) {
-                        node.selected = true;
-                    }
+                    node.selected = node.asset_name === ent;
                 }
             });
-            // console.debug("Loading trustBoundary with name: " + tb.name);
             loadTrustBoundary(tb.name);
             // unselect each node before continuing
             for (let node of nodes) {
@@ -424,7 +419,7 @@ function loadDfd() {
             for (let node of nodes) {
                 node.selected = threat["assets"].includes(node.asset_name);  // select nodes affected by this threat
             }
-            addThreat(threat["name"], threat["cve_id"], threat["description"], threat["stride_class"], threat["mitigated"]);
+            addThreat(threat["name"], threat["cve_id"], threat["description"], threat["stride_class"], false);  // add threat to unmitigated entities; will move to mitigated when processing MitigatedThreat
         });
         // load each control
         data.controls.forEach(control => {
@@ -447,12 +442,16 @@ function loadDfd() {
             // console.debug("Adding mitigated threat " + obj["threat__name"] + " to asset " + obj["asset__name"] + " with control " + obj["control__name"]);
             // get the node with asset_name
             const node = nodes.find(n => n.asset_name === obj["asset__name"]);
-            // get the index of threat with threat_name which should be contained in node.threats[2]
-            const index_of_threat = node.threats[2].findIndex(t => t.threat_title === obj["threat__name"]);
+            // get the index of threat with threat_name which should be contained in node.threats[1]
+            const index_of_threat = node.threats[1].findIndex(t => t.threat_title === obj["threat__name"]);
             // get the control with control_name which should be contained in node.controls[2]
             const index_of_control = node.controls[2].findIndex(c => c.control_title === obj["control__name"]);
-            node.threats[2][index_of_threat].controls.push(node.controls[2][index_of_control]);
-            node.controls[2][index_of_control].threats.push(node.threats[2][index_of_threat]);
+            node.threats[1][index_of_threat].controls.push(node.controls[2][index_of_control]);
+            node.controls[2][index_of_control].threats.push(node.threats[1][index_of_threat]);
+            // move threat from node.threats[1] to node.threats[2]
+            node.threats[2].push(node.threats[1][index_of_threat]);
+            node.threats[1].splice(index_of_threat, 1);
+            updateThreatBadges(node);
         });
     });
 
@@ -461,17 +460,13 @@ function loadDfd() {
 
 function loadElement(asset_type, asset_name) {
     // Prompt user for asset name
-    let area = d3.select('.dfd_assetview').node().getBoundingClientRect();
+    const area = d3.select('.dfd_assetview').node().getBoundingClientRect();
 
     // Add new node to nodes array
-    let rand_x = area.width/2 + Math.random()*5 - 10;
-    let rand_y = area.height/2 + Math.random()*5 - 10;
-
-    // deep cloning hard coded suggested threats and controls
-    // let threats = [[JSON.parse(JSON.stringify(threat_suggest[0])), JSON.parse(JSON.stringify(threat_suggest[1])), JSON.parse(JSON.stringify(threat_suggest[2]))], [], []];
-    // let controls = [[JSON.parse(JSON.stringify(control_suggest[0])), JSON.parse(JSON.stringify(control_suggest[1])), JSON.parse(JSON.stringify(control_suggest[2]))], [], []];
-    let threats = [[],[],[]];
-    let controls = [[],[],[]];
+    const rand_x = area.width/2 + Math.random()*5 - 10;
+    const rand_y = area.height/2 + Math.random()*5 - 10;
+    const threats = [[],[],[]];
+    const controls = [[],[],[]];
     nodes.push({
         "id": total_nodes,
         "asset_type": asset_type,
@@ -614,7 +609,7 @@ function loadElement(asset_type, asset_name) {
 
     // force nodes to start in the center of the canvas
     node_group
-        .attr("transform", "translate(" + area.width/2 + "," + area.height/2 + ")")
+        .attr("transform", "translate(" + area.width/2 + "," + area.height/2 + ")");
 
     // Also, remove any duplicate nodes.
     node_update.exit().remove();
@@ -1456,7 +1451,7 @@ function associateBoundary(node) {
 
 function assocThreatAndControl(threat_name, control_name, asset_name, disassociate = false) {
     // Associate threat and control in the model
-    console.log('Received threat and control:', threat_name, control_name, asset_name, disassociate);
+    console.debug('Received threat and control:', threat_name, control_name, asset_name, disassociate);
     const change_type = disassociate ? "disassoc threat" : "assoc threat";
     $.ajax({
         type: "POST",
@@ -1752,17 +1747,17 @@ function editAssignedThreats(node, control) {
         }
     }
     document.getElementById("edit_threats").style.display = "none";
-    var status = 2;
+    let status = 2;
     for (let i = control.threats.length - 1; i >= 0; i--) {
         setTimeout(function() { 
             document.getElementsByClassName("del_threat")[i].onclick = function () {
-                var threat = control.threats[i];
+                const threat = control.threats[i];
                 if (!confirm("Remove " + threat.threat_title + " from " + control.control_title + "?")) {
                     return;
                 }
                 control.threats.splice(i, 1);
                 threat.controls.splice(threat.controls.indexOf(control), 1);
-                assocThreatAndControl(threat.threat_title, control.control_title, nodes.asset_name,true);  // updates model
+                assocThreatAndControl(threat.threat_title, control.control_title, node.asset_name,true);  // updates model
                 
                 // Check if threat is no longer mitigated
                 if (threat.controls.length === 0) {
@@ -1791,7 +1786,7 @@ function editAssignedThreats(node, control) {
             }
         }, 0);
     }
-    var done_edit = document.createElement("button");
+    const done_edit = document.createElement("button");
     done_edit.id = "done_edit";
     done_edit.onclick = function () {
         displayControl(node, status, control);
@@ -1804,8 +1799,7 @@ function editAssignedThreats(node, control) {
 // its ID in the HTML document.
 function getDropdownValue(html_id) {
     let dropdown = document.getElementById(html_id);
-    let value = parseInt(dropdown.options[dropdown.selectedIndex].value);
-    return value;
+    return parseInt(dropdown.options[dropdown.selectedIndex].value);
 }
 
 // Helper function that finds the index of an asset in the nodes array 
@@ -2282,7 +2276,7 @@ function createAssetOptions() {
         for (let bound of delBoundaries) {
             deleteBoundary(bound);
         }
-        // TODO: this is where asset is deleted
+        // this is where asset is deleted
         let node_index = nodeIndex(assetID)
         console.debug("Asset type, node index, assetID:")
         console.debug(nodes[node_index])
@@ -2295,14 +2289,14 @@ function createAssetOptions() {
                 type: nodes[node_index].asset_type,
             },
             dataType: "html",
-            success: function(result){
-                alert("Success");
-            },
+            // success: function(result){
+            //     alert("Success");
+            // },
         });
 
         nodes.splice(nodeIndex(assetID), 1);
         svg.selectAll(".node_group").each(function (d) {
-            if (assetID == d.id) {
+            if (assetID === d.id) {
                 d3.select(this).remove();
             }
         });
@@ -2310,7 +2304,7 @@ function createAssetOptions() {
 
         // removing all dataflows connected to this asset
         for (let i = 0; i < links.length; i++) {
-            if (links[i].source.id == assetID || links[i].target.id === assetID) {
+            if (links[i].source.id === assetID || links[i].target.id === assetID) {
                 links.splice(i, 1);
                 i--;
             }
@@ -2811,7 +2805,7 @@ function loadDataFlow(source, target, name) {
         // "multifactor_authentication": None,
         "distance": 30n
     }
-    console.log(link)
+    // console.debug(link);
     // ...and append it to our array of links
     links.push(link);
 
@@ -2907,7 +2901,7 @@ function addDataFlow() {
     let double_headed = false
 
     // Check that user actually has two assets selected:
-    if (source == -1 || target == -1) {
+    if (source === -1 || target === -1) {
         alert("Please select two assets to create a dataflow between!");
         return;
     }
@@ -2958,14 +2952,17 @@ function addDataFlow() {
             comments: ""
         },
         dataType: "html",
-        success: function(result){
-            alert("Added dataflow.");
+        // success: function(result){
+        //     alert("Added dataflow.");
+        // },
+        error: res => {
+            console.error("Error adding dataflow:", res);
+            alert("Error adding dataflow!");
         },
     });
 
-    if (nodes[source].asset_type == "Actor" || nodes[target].asset_type == "Actor") {
-        var protocol = window.prompt("What is the protocol?", "Not Specified");
-        link.protocol = protocol;
+    if (nodes[source].asset_type === "Actor" || nodes[target].asset_type === "Actor") {
+        link.protocol = window.prompt("What is the protocol?", "Not Specified");
     }
 
     // ...and append it to our array of links
@@ -3033,9 +3030,9 @@ function addDataFlow() {
 
     // Check if this new dataflow is an inter-trust boundary flow
     for (let boundary of Object.keys(boundaries)) {
-        var assets = boundaries[boundary];
+        const assets = boundaries[boundary];
         if ((assets.includes(nodes[source]) && !assets.includes(nodes[target])) || (assets.includes(nodes[target]) && !assets.includes(nodes[source]))) {
-            var jitter; 
+            let jitter;
             if (d3.selectAll(".boundary").filter(function() {return d3.select(this).attr("boundaryName") === boundary;}).empty()) {
                 jitter = (Math.random() * 0.3) + 0.1;
             }
@@ -3048,11 +3045,8 @@ function addDataFlow() {
         }
     }
 
-    // Remove any links that need to be removed
-    link_update.exit().remove();
-
-    // Last, tell our simulation to restart
-    simulation.alpha(1.0).restart();
+    link_update.exit().remove();  // Remove any links that need to be removed
+    simulation.alpha(1.0).restart();  // Last, tell our simulation to restart
 }
 
 // Defines the process of adding components to create a new workflow 
@@ -3070,25 +3064,25 @@ function addComponents() {
     }
 
     // Create the new div to be appended to the existing dropdowns
-    var newDiv = document.createElement('div');
+    const newDiv = document.createElement('div');
     newDiv.classList.add("component_div");
 
     // Create the label for the next selection
     var label = document.createElement('label');
-    var ordinal = comp_buttons.length + 1;
-    if (ordinal % 10 == 1 && ordinal % 100 != 11) {
+    let ordinal = comp_buttons.length + 1;
+    if (ordinal % 10 === 1 && ordinal % 100 !== 11) {
         ordinal += "st:";
     }
-    else if (ordinal % 10 == 2 && ordinal % 100 != 12) {
+    else if (ordinal % 10 === 2 && ordinal % 100 !== 12) {
         ordinal += "nd:";
     }
-    else if (ordinal % 10 == 3 && ordinal % 100 != 13) {
+    else if (ordinal % 10 === 3 && ordinal % 100 !== 13) {
         ordinal += "rd:";
     }
     else {
         ordinal += "th:";
     }
-    label.innerHTML = ordinal;
+    label.innerHTML = ordinal.toString();
     newDiv.appendChild(label);
 
     // Create the next asset dropdown 
@@ -4290,7 +4284,7 @@ function saveFinding() {
         "assessment_date": new Date(),
         "notes": notes_textbox.value,
     }
-    console.log(nodes[asset_index].threats[threat_index].findings)
+    console.debug(nodes[asset_index].threats[threat_index].findings);
 
     alert("Findings saved!");
 }
