@@ -57,7 +57,7 @@ class Threat(models.Model):
     description = models.TextField(blank=True)
 
 class Assumption(models.Model):
-    name = models.CharField(max_length=100, unique=True)
+    # name = models.CharField(max_length=100, unique=True)
     comments = models.TextField(blank=True)
     assets = models.ManyToManyField(Entity)
     threats = models.ManyToManyField(Threat)

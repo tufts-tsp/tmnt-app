@@ -6,6 +6,7 @@ const workflows = {};
 const boundaries = {};
 let threats = {};
 let controls = {};
+let assumptions = [];
 let svg;
 let container;
 let simulation;
@@ -14,11 +15,11 @@ let dfd_svg_fraction = 0.72;
 let multiselect = false;  // toggles whether multiple nodes can be selected
 
 // define an onclick listener for a d3 node that allows the user to select multiple nodes at a time
-function showSelectAssets(id, forThreats = true) {
+function showSelectAssets(id, doneButtonId) {
     // unselect all nodes
     svg.dispatch('click');  // this will unselect all nodes and links
     document.querySelectorAll("div.asset_selection").forEach(div => {div.innerText = "";});  // clear selected assets text
-    const done_button = forThreats ? document.getElementById("display_selected_for_threats") : document.getElementById("display_selected_for_controls");
+    const done_button = document.getElementById(doneButtonId);
     const select_assets_button = document.getElementById(id);
 
     select_assets_button.style.display = "none";  // hide Start selecting button
@@ -26,7 +27,7 @@ function showSelectAssets(id, forThreats = true) {
     multiselect = true;  // allow multi selection
 }
 
-function displaySelectedAssets(forThreats = true) {
+function displaySelectedAssets(panelName) {
     // Assume selected nodes are tracked with a property `selected: true` in the global `nodes` array
     const divsToUpdate = document.querySelectorAll("div.asset_selection");
     if (typeof nodes !== "undefined" && Array.isArray(nodes)) {
@@ -41,13 +42,20 @@ function displaySelectedAssets(forThreats = true) {
     }
     multiselect = false;
     // hide done selecting button and display Start selecting button (if user wants to alter selection)
-    if (forThreats) {
+    if (panelName === "threats") {
         document.getElementById("showSelectedAssets").style.display = "block";
         document.getElementById("display_selected_for_threats").style.display = "none";
     }
-    else {
+    else if (panelName === "controls") {
         document.getElementById("showSelectedAssetsControls").style.display = "block";
         document.getElementById("display_selected_for_controls").style.display = "none";
+    }
+    else if (panelName === "assumptions") {
+        document.getElementById("showSelectedAssetsAssump").style.display = "block";
+        document.getElementById("display_selected_for_assump").style.display = "none";
+    }
+    else {
+        console.error("Unknown panel name: " + panelName);
     }
 }
 
@@ -223,10 +231,10 @@ window.onresize = function() {
     simulation.alpha(1.0).restart();
 }
 
-// Toggles between the four question sections (What are we working on?, etc.)
+// Toggles between the four question sections (What are we working on?, etc.) and Assumptions
 // Determines which one should be displayed.
 function showSection(icon) {
-    var divs = document.querySelectorAll('.items');
+    const divs = document.querySelectorAll('.items');
     divs.forEach(div => {
         div.style.display = "none";
     });
@@ -247,7 +255,7 @@ function showSection(icon) {
             elem.disabled = (nodes.length === 0);
         }
     }
-    let elems = document.getElementsByClassName('add_button');
+    const elems = document.getElementsByClassName('add_button'); // TODO: this disables some testing buttons
     for (let elem of elems) {
         elem.disabled = (nodes.length === 0);
     }
@@ -255,6 +263,9 @@ function showSection(icon) {
     // Recalculate dropdowns when findings tab is opened
     if (icon === "findings") {
         updateThreatDropdown();
+    }
+    else if (icon === "assumptions") {
+        displayAllAssumptions();
     }
 }
 
@@ -305,7 +316,7 @@ function showSuggestedThreats() {
             threat.threat_status = "Known";
             nodes[node_id].threats[0].splice(threat_id, 1);
             nodes[node_id].threats[1].push(threat);
-            alert("New threat (" + threat.threat_title + ") added to " + nodes[node_id].asset_name + " successfully!");
+            // alert("New threat (" + threat.threat_title + ") added to " + nodes[node_id].asset_name + " successfully!");
             div.innerHTML = "";
             showSuggestedThreats();
         }
@@ -376,7 +387,7 @@ function showSuggestedControls() {
             control.control_status = "Known";
             nodes[node_id].controls[1].push(control);
             nodes[node_id].controls[0].splice(control_id, 1);
-            alert("New control (" + control.control_title + ") added to " + nodes[node_id].asset_name + " successfully!");
+            // alert("New control (" + control.control_title + ") added to " + nodes[node_id].asset_name + " successfully!");
             div.innerHTML = "";
             showSuggestedControls();
         }
@@ -453,6 +464,16 @@ function loadDfd() {
             node.threats[1].splice(index_of_threat, 1);
             updateThreatBadges(node);
         });
+        data.assumptions.forEach(obj => {
+            // TODO: obj["threats"] remains unused
+            // select all nodes with name in obj["assets"]
+            for (let node of nodes) {
+                node.selected = obj["assets"].includes(node.asset_name);
+            }
+            console.debug(obj.comments)
+            addAssumption(obj.comments);
+        });
+        nodes.forEach(n => {n.selected = false;})  // unselect nodes after loading DFD
     });
 
     simulation.alpha(1.0).restart();
@@ -1485,7 +1506,7 @@ function displayThreat(node, status, threat) {
                     threat.threat_status = "Known";
                     node.threats[0].splice(node.threats[0].indexOf(threat), 1);
                     node.threats[1].push(threat);
-                    alert("New threat (" + threat.threat_title + ") added to " + node.asset_name + " successfully!");
+                    // alert("New threat (" + threat.threat_title + ") added to " + node.asset_name + " successfully!");
                     updateThreatBadges(node);
                     displayThreat(node, 1, threat);
                 }
@@ -1651,7 +1672,7 @@ function displayControl(node, status, control) {
                     control.control_status = "Known";
                     node.controls[0].splice(node.controls[0].indexOf(control), 1);
                     node.controls[1].push(control);
-                    alert("New control (" + control.control_title + ") added to " + node.asset_name + " successfully!")
+                    // alert("New control (" + control.control_title + ") added to " + node.asset_name + " successfully!")
                     displayControl(node, 1, control);
                 }
                 document.getElementById("ignore_control").onclick = function() {
@@ -3149,7 +3170,7 @@ function addWorkFlow() {
         var selected = dropdown.value;
 
         // Check that user has selected all components 
-        if (selected == -1) {
+        if (selected === -1) {
             alert("Please make a selection for each component or remove components!");
             return;
         }
@@ -3166,17 +3187,17 @@ function addWorkFlow() {
         if (!links.find(link => link.source === components[i] && link.target === components[i + 1])) {
             alert("There is no data flow from " + components[i].asset_name + " to " + components[i + 1].asset_name);
             return;
-        };
+        }
     }
 
     // Prevent duplicate workflows
     for (let workflow of Object.values(workflows)) {
-        if (components.length != workflow.length) {
+        if (components.length !== workflow.length) {
             continue;
         }
         let check_duplicate = true;
         for (let i = 0; i < components.length; i++) {
-            if (workflow[i] != components[i]) {
+            if (workflow[i] !== components[i]) {
                 check_duplicate = false;
                 break;
             }
@@ -3200,7 +3221,7 @@ function addWorkFlow() {
         
     // Set default workflow name if user does not name it 
     var length = Object.keys(workflows).length + 1;
-    if (workflow_name == "") {
+    if (workflow_name === "") {
         workflow_name = "Workflow " + length;
     }
     // Prevent duplicate names
@@ -3227,7 +3248,7 @@ function addWorkFlow() {
 // Highlights the components of a workflow that the user selects to view
 function viewWorkflow() {
     // Check that user actually selects a workflow
-    if (getDropdownValue("workflow_dropdown") == -1) {
+    if (getDropdownValue("workflow_dropdown") === -1) {
         alert("Please select a workflow to view!");
         return;
     }
@@ -3257,7 +3278,7 @@ function viewWorkflow() {
     let bottom_bar_html = "<h2>"+ selectedWorkflow +"</h2> <h3 style=\"font-weight:normal\">";
     for (let component of components) {
         bottom_bar_html += "<span style=\"cursor: pointer\" class=\"component\">" + component.asset_name + "</span>";
-        if (component != components[components.length - 1]) {
+        if (component !== components[components.length - 1]) {
             bottom_bar_html += " &#8594 ";
         }
     }
@@ -3349,13 +3370,13 @@ function editWorkflow(selectedWorkflow) {
     var front_dropdown = document.getElementById("front_dropdown");
     document.getElementById("front_button").onclick = function() {
         var selected = getDropdownValue("front_dropdown");
-        if (selected == -1) {
+        if (selected === -1) {
             alert("Please select an asset to add to the front of the workflow.");
             return;
         }
         var valid = false;
         for (let link of links) {
-            if (link.source == nodes[selected] && link.target == components[0]) {
+            if (link.source === nodes[selected] && link.target === components[0]) {
                 valid = true;
             }
         }
@@ -3373,13 +3394,13 @@ function editWorkflow(selectedWorkflow) {
     document.getElementById("back_button").onclick = function() {
         var selected = getDropdownValue("back_dropdown");
         var back = components[components.length - 1];
-        if (selected == -1) {
+        if (selected === -1) {
             alert("Please select an asset to add to the back of the workflow.");
             return;
         }
-        var valid = false;
+        let valid = false;
         for (let link of links) {
-            if (link.source == back && link.target == nodes[selected]) {
+            if (link.source === back && link.target === nodes[selected]) {
                 valid = true;
             }
         }
@@ -3439,7 +3460,7 @@ function editWorkflow(selectedWorkflow) {
 // Highlights the assets of a trust boundary that the user selects to view
 function viewBoundary() {
     // Check that user actually selects a trust boundary
-    if (getDropdownValue("boundary_dropdown") == -1) {
+    if (getDropdownValue("boundary_dropdown") === -1) {
         alert("Please select a trust boundary to view!");
         return;
     }
@@ -3611,7 +3632,7 @@ function editBoundary(selectedBoundary) {
     // Creating button to add assets to the trust boundary
     document.getElementById("add_button").onclick = function() {
         var selected = getDropdownValue("add_dropdown");
-        if (selected == -1) {
+        if (selected === -1) {
             alert("Please select an asset to add to the trust boundary.");
             return;
         }
@@ -4025,11 +4046,12 @@ function addThreat(title, cve_num, description, stride_class, mitigated = false)
             if (result !== 200) {
                 alert("Error storing newly created threat. Received: " + result);
             }
+            else {
+                alert("New threat (" + title + ") added to " + selected_assets.map(node => node.asset_name).join(", ") + " successfully!");
+            }
         },
         });
     }
-    // TODO: move following line into if(new_threat) block after debugging
-    alert("New threat (" + title + ") added to " + selected_assets.map(node => node.asset_name).join(", ") + " successfully!");
 
     let textboxes = document.getElementsByClassName("threat_textbox");
     for (let textbox of textboxes) {
@@ -4221,6 +4243,85 @@ function addControl(control_title, control_description, mitigated = false) {
         if (options && options.children[0].value === node.id) {
             svg.selectAll(".node_group").filter(d => d.id === node.id).dispatch('click').dispatch('click');
         }
+    }
+}
+
+function showAddAssumpPanel(goBack=false) {
+    document.getElementById("new_assumption").style.display = goBack? "none":"block";
+    document.getElementById("display_all_assumptions").style.display = goBack? "block":"none";
+}
+
+// function that displays the detail about the given assumption
+function showAssumpDetailPanel(assumption) {
+    const panelDiv = document.getElementById("display_assumption_details");
+    panelDiv.style.display = "block";
+    // add a back button to go back to the complete list of assumptions (calls displayAllAssumptions())
+    // BUTTON SHOULD BE IN THE HTML NOW
+    // const goBack = document.createElement("button");
+    // goBack.innerHTML = "Go Back";
+    // goBack.classList.add("add_button");  // TODO: change to a different class of button after we have diff classes
+    // goBack.onclick = displayAllAssumptions;
+    document.getElementById("display_all_assumptions").style.display = "none";
+    // get the assumption from the global assumptions variable
+    let a = assumptions.find(a => a.text === assumption);
+    if (!a) {
+        alert("Assumption not found: " + assumption);
+        return;
+    }
+    // display names of affected assets, if any
+    document.getElementById("affected_entities").innerText = a.assets.length > 0? a.assets.join(", ") : "No assets affected";
+    // display the assumption text
+    document.getElementById("assumption_text").innerText = a.text;
+    // TODO: buttons to edit, delete
+}
+
+// Function to display each assumption in a list
+function displayAllAssumptions() {
+    document.getElementById("display_all_assumptions").style.display = "block";  // show the panel with all assumptions
+    document.getElementById("display_assumption_details").style.display = "none";  // hide both other panels
+    document.getElementById("new_assumption").style.display = "none";
+    const container = document.getElementById("assumption_container");
+    container.innerHTML = assumptions.length === 0? "<div>No assumptions added yet!</div>" : "";  // clear the container
+    for (let assumption of assumptions) {  // make a div for each assumption
+        let text = assumption.text;
+        if (assumption.text.length > 20) {
+            text = assumption.text.substring(0, 17) + "...";  // truncate text to 20 characters
+        }
+        // container.innerHTML += "<div class=\"assumption_item\" onclick=\"showAssumpDetailPanel(\'" + assumption.text + "\');\">" + text + "</div>";
+        container.innerHTML += "<button class=\"add_button assumption_item popout_button\" onclick=\"showAssumpDetailPanel(\'" + assumption.text + "\');\">" + text + "</button>";
+    }
+    // TODO: might need to explicitly re-add the "Add Assumption" button here
+}
+
+function addAssumption(text) {
+    const new_assumption = text === undefined;
+    const selected_assets = nodes.filter(node => node.selected);
+    // if (selected_assets.length === 0) {
+    //     alert("Please select an asset to add an assumption to!");
+    //     return;
+    // }
+    const assumption_text = new_assumption? document.getElementById("assumption_description").value : text;
+    // TODO: do something for loading an assumption or storing it somewhere
+    assumptions.push({"text": assumption_text, "assets": selected_assets.map(node => node.asset_name)});
+    if (new_assumption) {
+        $.ajax({
+            type: "POST",
+            url: addAssumptionUrl,
+            data: {
+                assets: selected_assets.map(node => node.asset_name),
+                description: assumption_text,
+            },
+            data_type: "html",
+            success: function(result){
+                if (result !== 200) {
+                    alert("Error storing newly created assumption. Received: " + result);
+                }
+            },
+            error: function(error) {
+                alert("Error storing newly created assumption. Received: " + error);
+            }
+        });
+        displayAllAssumptions();
     }
 }
 

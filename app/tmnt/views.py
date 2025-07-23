@@ -337,20 +337,20 @@ def delete_threat(request):
     return JsonResponse(200, safe=False)
 
 def add_assumption(request):
-    name = request.POST.get("name")
+    # name = request.POST.get("name")
     assets = request.POST.getlist("assets[]")
     threats = request.POST.getlist("threats[]")
-    comments = request.POST.get("comments")
+    comments = request.POST.get("description")
     with transaction.atomic():
-        assump = Assumption(name=name, comments=comments)
-        # assump.save()  # not sure if save is necessary
+        assump = Assumption(comments=comments)
+        assump.save()  # needed before many-to-many relationships can be added
         assets = Entity.objects.filter(name__in=assets)
         threats = Threat.objects.filter(name__in=threats)
-        assump.assets.set(*assets)
-        assump.threats.set(*threats)
+        assump.assets.add(*assets)
+        assump.threats.add(*threats)
         assump.save()
-        ua = UserAction(username='', action=f'create assumption', entities=name,
-                        details=f'Assets: {assets}; Threats: {threats} Comments: {comments}')
+        ua = UserAction(username='', action=f'create assumption', entities=comments,
+                        details=f'Assets: {assets}; Threats: {threats}')
         ua.save()
     return JsonResponse(200, safe=False)
 
@@ -452,6 +452,9 @@ def load_dfd(request):
         mitigated_assets = list(MitigatedThreat.objects.filter(control__name=c['name']).values_list('asset__name', flat=True))
         print('mitigated assets:', mitigated_assets)
         controls.append({'name': c['name'], 'description': c['description'], 'assets': control_assets, 'mitigated_assets': mitigated_assets})
+    assumptions = []
+    for a in list(Assumption.objects.values('comments')):
+        assumptions.append({'comments': a['comments'], 'assets': [obj.name for obj in Assumption.objects.get(comments=a['comments']).assets.all()], 'threats': [obj.name for obj in Assumption.objects.get(comments=a['comments']).threats.all()]})
     print(list(MitigatedThreat.objects.values('asset__name', 'threat__name', 'control__name')))
     data = {'entity': list(Entity.objects.values()),
             'boundary': boundary,
@@ -459,6 +462,6 @@ def load_dfd(request):
             'threats': threats,
             'controls': controls,
             'mitigated_threats': list(MitigatedThreat.objects.values('asset__name', 'threat__name', 'control__name')),
-            'assumptions': [], #list(Assumption.objects.values('name', 'comments', 'assets__name', 'threats__name')),
+            'assumptions': assumptions,
             }
     return JsonResponse(data, safe=False)

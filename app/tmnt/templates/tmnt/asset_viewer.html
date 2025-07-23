@@ -26,10 +26,14 @@
 <div class="lowerArea">
     <!-- Left sidebar to switch between modes -->
     <div class="modeBar">
-        <img src="{% static 'assets.png' %}" width="75%" style="padding-bottom: 10px;" onclick= "showSection('assets')">
-        <img src="{% static 'warnings.png' %}" width="75%" style="padding-bottom: 10px;" onclick="showSection('threats')">
-        <img src="{% static 'wrench.png' %}" width="75%" style="padding-bottom: 10px;"  onclick="showSection('controls')">
-        <img src="{% static 'magnify.png' %}" width="75%" style="padding-bottom: 10px;" onclick="showSection('findings')">
+        <img src="{% static 'assets.png' %}" width="75%" style="padding-bottom: 10px;" onclick= "showSection('assets')" title="Data Flow Diagram">
+        <img src="{% static 'warnings.png' %}" width="75%" style="padding-bottom: 10px;" onclick="showSection('threats')" title="Threats">
+        <img src="{% static 'wrench.png' %}" width="75%" style="padding-bottom: 10px;"  onclick="showSection('controls')" title="Controls">
+        <img src="{% static 'magnify.png' %}" width="75%" style="padding-bottom: 10px;" onclick="showSection('findings')" title="Findings">
+{#        insert a horizontal break #}
+        <hr>
+        <img src="{% static 'thought-cloud.svg' %}" width="75%" style="padding-bottom: 10px;" onclick="showSection('assumptions')" title="Assumptions">
+
     </div>
 
     <!-- Area for actually adding assets/threats/controls/etc. -->
@@ -111,8 +115,8 @@
             <h3>Threats</h3>
             <div>
                 <div class="asset_selection"></div>
-                <button type="button" class="add_button" id="showSelectedAssets" onclick="showSelectAssets('showSelectedAssets')">Select Assets</button>
-                <button type="button" class="add_button" id="display_selected_for_threats" onclick="displaySelectedAssets()" style="display:none">Done Selecting</button>
+                <button type="button" class="add_button" id="showSelectedAssets" onclick="showSelectAssets('showSelectedAssets', 'display_selected_for_threats')">Select Assets</button>
+                <button type="button" class="add_button" id="display_selected_for_threats" onclick="displaySelectedAssets('threats')" style="display:none">Done Selecting</button>
 {#            <label for="threat_dropdown">Add to asset:</label>#}
 {#            <select name="threat_dropdown" id="threat_dropdown" class="dropdown asset_dropdown" onchange="showSuggestedThreats()" disabled>#}
 {#                <option value="invalid">Add an asset first!</option>#}
@@ -138,13 +142,13 @@
                 </select>
             <button type="button" class="add_button" onClick = "addThreat()">Add Threat</button></div>
             <br>
-            <div id = "added_threats">
-                <h3>Potential Threats</h3>
-                <select id="threat_suggest_dropdown" disabled>
-                    <option value="invalid">Select an asset first!</option>
-                </select>
-                <div id="display_suggested_threat"></div>
-            </div>
+{#            <div id = "added_threats">#}
+{#                <h3>Potential Threats</h3>#}
+{#                <select id="threat_suggest_dropdown" disabled>#}
+{#                    <option value="invalid">Select an asset first!</option>#}
+{#                </select>#}
+{#                <div id="display_suggested_threat"></div>#}
+{#            </div>#}
         </div>
 
         <!-- Panel for adding controls -->
@@ -155,12 +159,8 @@
             <h3>Controls</h3>
             <div>
                 <div class="asset_selection"></div>
-                <button type="button" class="add_button" id="showSelectedAssetsControls" onclick="showSelectAssets('showSelectedAssetsControls', false)">Select Assets</button>
-                <button type="button" class="add_button" id="display_selected_for_controls" onclick="displaySelectedAssets(false)" style="display:none">Done Selecting</button>
-{#            <label for="control_dropdown">Apply to asset:</label>#}
-{#            <select name="control_dropdown" id = "control_dropdown" class="dropdown asset_dropdown" onchange="showSuggestedControls()" disabled>#}
-{#                <option value="invalid">Add an asset first!</option>#}
-{#            </select>#}
+                <button type="button" class="add_button" id="showSelectedAssetsControls" onclick="showSelectAssets('showSelectedAssetsControls', 'display_selected_for_controls')">Select Assets</button>
+                <button type="button" class="add_button" id="display_selected_for_controls" onclick="displaySelectedAssets('controls')" style="display:none">Done Selecting</button>
             <br>
             <input class="controls_textbox" id="control_title" type="text" placeholder="Control title..." name="control_title">
             <br>
@@ -168,13 +168,13 @@
 
             <button type="button" class="add_button" onClick="addControl()">Add Control</button></div>
             <br>
-            <div id = "added_controls">
-                <h3>Potential Threats</h3>
-                <select id="control_suggest_dropdown" disabled>
-                    <option value="invalid">Select an asset first!</option>
-                </select>
-                <div id="display_suggested_control"></div>
-            </div>
+{#            <div id = "added_controls">#}
+{#                <h3>Potential Threats</h3>#}
+{#                <select id="control_suggest_dropdown" disabled>#}
+{#                    <option value="invalid">Select an asset first!</option>#}
+{#                </select>#}
+{#                <div id="display_suggested_control"></div>#}
+{#            </div>#}
         </div>
 
         <!-- Panel for adding and reviewing findings -->
@@ -184,7 +184,7 @@
 
             <h3>Findings</h3>
             <label for="findings_asset_dropdown">Review findings for:</label>
-            <select id="findings_asset_dropdown" name="asset_dropdown" onchange="updateThreatDropdown()" id="asset_dropdown" class="dropdown asset_dropdown" disabled>
+            <select id="findings_asset_dropdown" name="asset_dropdown" onchange="updateThreatDropdown()" class="dropdown asset_dropdown" disabled>
                 <option value="-1">Add an asset first!</option>
             </select>
             <br>
@@ -270,6 +270,36 @@
 
              <br>
              <button type="button" class="add_button" onclick="saveFinding()">Save</button>
+            </div>
+        </div>
+        <!-- Panel for adding assumptions -->
+        <div id="assumptions" class="items" style="display: none;">
+            <h2>Assumptions</h2>
+            <br>
+            <!-- Displaying existing assumptions -->
+            <div id="display_all_assumptions">
+                <button type="button" class="add_button" id="start_adding_assump" onclick="showAddAssumpPanel()">Add new assumption</button>
+                <div id="assumption_container"></div>
+            </div>
+            <!-- Display one assumption in detail -->
+            <div id="display_assumption_details" style="display:none">
+                <h3>Assumption Details</h3>
+                <button class="add_button" onclick="displayAllAssumptions()">Go Back</button>
+                <h4>Affected entities:</h4>
+                <div id="affected_entities">No assets associated with this assumption</div>
+                <h4>Assumption description:</h4>
+                <div id="assumption_text"></div>
+            </div>
+
+            <!-- Creating new assumption-->
+            <div id="new_assumption" style="display:none">
+                <button class="add_button" onclick="displayAllAssumptions()">Go Back</button>
+                <h3>Affected entities:</h3>
+                <div class="asset_selection">No assets selected</div>
+                <button type="button" class="add_button" id="showSelectedAssetsAssump" onclick="showSelectAssets('showSelectedAssetsAssump', 'display_selected_for_assump')" style="display:block">Select Assets</button>
+                <button type="button" class="add_button" id="display_selected_for_assump" onclick="displaySelectedAssets('assumptions')" style="display:none">Done Selecting</button>
+                <textarea class="controls_textbox" id="assumption_description" name="assumption_description" placeholder="(Enter assumption text...)" rows="4" cols="20"></textarea>
+                <button type="button" class="add_button" id="submit_assumption" onclick="addAssumption()">Add Assumption</button>
             </div>
         </div>
     </div>
