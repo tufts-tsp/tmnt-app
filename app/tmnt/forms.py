@@ -2,6 +2,8 @@ from django import forms
 from django.forms import ValidationError
 from django.utils.safestring import mark_safe
 
+from tmnt.models import Project
+
 
 class UploadDFDFileForm(forms.Form):
     inputText = forms.CharField(
@@ -20,3 +22,8 @@ class UploadDFDFileForm(forms.Form):
             cleaned_data.get("inputText") or cleaned_data.get("inputFile")
         ):
             raise ValidationError("Please input a DFD", code="missing_dfd")
+
+class NewProjectForm(forms.ModelForm):
+    class Meta:
+        model = Project
+        fields = ["name"]

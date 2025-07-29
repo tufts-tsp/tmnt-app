@@ -1,8 +1,23 @@
 from django.db import models
+from django.contrib.auth.models import User
+
+class Project(models.Model):
+    name = models.CharField(max_length=100)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="my_projects")
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['name', 'user'], name='unique_name_per_user')]
 
 class Entity(models.Model):
     # Actor, Server, Process, Lambda, TrustBoundary, DataStore, ExtAsset all inherit this class
     name = models.CharField(max_length=100, unique=True, null=False)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
     comments = models.TextField(blank=True)
     type = models.CharField(max_length=15, null=False)
 
@@ -11,6 +26,7 @@ class Entity(models.Model):
 
 class Actor(models.Model):
     name = models.CharField(max_length=100, unique=True)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
     parent_entity = models.ForeignKey(Entity, on_delete=models.CASCADE, related_name='parent_actor')
     priv_level = models.CharField(max_length=100)  # may want predefined values
 
@@ -19,6 +35,7 @@ class Actor(models.Model):
 
 class TrustBoundary(models.Model):
     name = models.CharField(max_length=100, unique=True)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
     entities = models.ManyToManyField(Entity)
     actor_type = models.CharField(max_length=100)
     actor_name = models.CharField(max_length=100)  # maybe should be ref to Actor class
@@ -36,6 +53,7 @@ class Datastore(Entity):
 
 class ExtAsset(models.Model):
     name = models.CharField(max_length=100, unique=True)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
     parent_entity = models.ForeignKey(Entity, on_delete=models.CASCADE, related_name='parent_extasset')
     ports = models.CharField(max_length=400)  # expecting comma-separated list of integers
     machine_type = models.CharField(max_length=100)
@@ -45,11 +63,13 @@ class DataFlow(models.Model):
     source = models.ForeignKey(Entity, on_delete=models.CASCADE, related_name='source_entity')
     dest = models.ForeignKey(Entity, on_delete=models.CASCADE, related_name='dest_entity')
     name = models.CharField(max_length=100)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
     protocol = models.CharField(max_length=100)
     comments = models.TextField(blank=True)
 
 class Threat(models.Model):
     name = models.CharField(max_length=100)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
     assets = models.ManyToManyField(Entity)
     cve_id = models.CharField(max_length=100)
     stride_class = models.CharField(max_length=50)  # has six values...maybe revisit type
@@ -58,12 +78,14 @@ class Threat(models.Model):
 
 class Assumption(models.Model):
     # name = models.CharField(max_length=100, unique=True)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
     comments = models.TextField(blank=True)
     assets = models.ManyToManyField(Entity)
     threats = models.ManyToManyField(Threat)
 
 class Control(models.Model):
     name = models.CharField(max_length=100, unique=True)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
     description = models.TextField(blank=True)
     threats = models.ManyToManyField(Threat)
     assets = models.ManyToManyField(Entity)
@@ -72,8 +94,10 @@ class MitigatedThreat(models.Model):
     asset = models.ForeignKey(Entity, on_delete=models.CASCADE, related_name='asset')
     threat = models.ForeignKey(Threat, on_delete=models.CASCADE, related_name='threat')
     control = models.ForeignKey(Control, on_delete=models.CASCADE, related_name='control')
+    project= models.ForeignKey(Project, on_delete=models.CASCADE)
 
 class Workflow(models.Model):
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
     name = models.CharField(max_length=100, unique=True)
 
 class UserAction(models.Model):
@@ -84,9 +108,9 @@ class UserAction(models.Model):
     details: string providing details of threat or assumption
     """
     username = models.CharField(max_length=100)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
     action = models.CharField(max_length=100, null=False, default="Unknown")
     entities = models.TextField(blank=True)
     details = models.TextField(blank=True)
-    # stride_class = models.CharField(max_length=100)
     time = models.DateTimeField(auto_now_add=True)
 

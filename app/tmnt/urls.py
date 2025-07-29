@@ -1,19 +1,22 @@
-from django.urls import path
+from django.urls import path, include
 from django.contrib import admin
 
 from . import views
+from .views import SignUpView
 
 urlpatterns = [
-    path("tmnt/", views.workspace, name="workspace"),
+    path("tmnt/<str:project_name>", views.workspace, name="workspace"),
+    path("tmnt/", views.project_list, name="tmnt_default"),
     # path("api/add_actor", views.add_actor, name="api/add_actor"),
     # path("api/add_server", views.add_server, name="api/add_server"),
     # path("api/add_process", views.add_process, name="api/add_process"),
     # path("api/add_lambda", views.add_lambda, name="api/add_lambda"),
     # path("api/add_boundary", views.add_boundary, name="api/add_boundary"),
+    # path("api/add_datastore", views.add_datastore, name="api/add_datastore"),
+    # path("api/add_dataflow", views.add_dataflow, name="api/add_dataflow"),
     path("api/edit_boundary", views.edit_boundary, name="api/edit_boundary"),
     path("api/add_entity", views.add_entity, name="api/add_entity"),
     path("api/add_externalasset", views.add_externalasset, name="api/add_externalasset"),
-    # path("api/add_datastore", views.add_datastore, name="api/add_datastore"),
     path("api/add_threat", views.add_threat, name="api/add_threat"),
     path("api/edit_threat", views.edit_threat, name="api/edit_threat"),
     path("api/delete_threat", views.delete_threat, name="api/delete_threat"),
@@ -25,7 +28,10 @@ urlpatterns = [
     path("api/delete_control", views.delete_control, name="api/delete_control"),
     path("api/delete_asset", views.delete_asset, name="api/delete_asset"),
     path("api/delete_all_assets", views.delete_all_assets, name="api/delete_all_assets"),
-    # path("api/add_dataflow", views.add_dataflow, name="api/add_dataflow"),
-    path("api/load_dfd", views.load_dfd, name="api/load_dfd"),
+    path("api/load_dfd/<str:project_name>", views.load_dfd, name="api/load_dfd"),
+    path("view_projects/", views.project_list, name="view_projects"),
+    path("create_project/", views.create_project, name="create_project"),
     path("admin/", admin.site.urls),
+    path("register/", SignUpView.as_view(), name="register"),
+    path("accounts/", include("django.contrib.auth.urls")),  # For login/logout
 ]

@@ -1,26 +1,12 @@
+{% extends "base.html" %}
 {% load static %}
 
-<!DOCTYPE html>
-<html>
+{% block title %}TMNT Asset Viewer - {{ project_name }}{% endblock %}
 
-<head>
-<title>TMNT Asset Viewer</title>
-<link rel="stylesheet" href="{% static 'tmnt.css' %}">
-<link rel="icon" href="{% static 'favicon.ico' %}">
-</head>
+{% block content %}
+    {% if user.is_authenticated %}
 
-
-
-<body>
-<!-- Top of screen menu bar -->
-<div id = 'menuBar'>
-    <h1>Threat Modeling Naturally Tool</h1>
-    <div class="topnav">
-        <a href="#share">Share</a>
-        <a href="#export">Export</a>
-        <a href="#profile">Profile</a>
-    </div>
-</div>
+{% include "registration/logout.html" %}
 
 <!-- Everything below the top of the screen -->
 <div class="lowerArea">
@@ -328,15 +314,18 @@
 </div>
 
 <!-- JavaScript code starts here -->
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
 <script type="text/javascript">
+// get project name from Django context
+    const projectName = "{{ project_name|escapejs }}";
+    const username = "{{ user.username|escapejs }}";
     // Generating URLs for AJAX POST calls
     var addEntityUrl = "{%  url 'api/add_entity' %}"
     var addExternalAssetUrl = "{% url 'api/add_externalasset' %}";
     var editBoundaryUrl = "{% url 'api/edit_boundary' %}";
     var deleteAssetUrl = "{% url 'api/delete_asset' %}";
     var deleteAllAssetsUrl = "{%  url 'api/delete_all_assets' %}";
-    var loadDfdUrl = "{% url 'api/load_dfd' %}";
+    var loadDfdUrl = "{% url 'api/load_dfd' project_name=project_name %}";
     var addThreatUrl = "{% url 'api/add_threat' %}";
     var editThreatUrl = "{% url 'api/edit_threat' %}";
     var deleteThreatUrl = "{% url 'api/delete_threat' %}";
@@ -347,8 +336,11 @@
     var editControlUrl = "{% url 'api/edit_control' %}";
     var deleteControlUrl = "{% url 'api/delete_control' %}";
 </script>
-<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 <script type="text/javascript" src="{% static 'scripts/interface.js' %}"></script>
-</body>
-
-</html>
+{% else %}
+    <div class="container mt-5">
+        <h2 class="mb-4">Ready to start threat modeling?</h2>
+        <p>Please <a href="{% url 'login' %}">log in</a> or <a href="{% url 'register' %}">register</a> a new account.</p>
+    </div>
+{% endif %}
+{% endblock %}

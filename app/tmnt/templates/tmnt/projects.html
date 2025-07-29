@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Projects{% endblock %}
+
+{% block content %}
+    {% if user.is_authenticated %}
+        <h1>Projects</h1>
+        <div class="container">
+            <div class="row">
+                <div class="col-md-12">
+                    <a href="{% url 'create_project' %}" class="btn btn-primary mb-3">Create New Project</a>
+                </div>
+            </div>
+            <div class="row">
+                {% if not projects %}
+                    <div class="col-md-12">
+                        <p>Create a new project to get started.</p>
+                    </div>
+                {% else %}
+                {% for project in projects %}
+                    <div class="col-md-4 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <a class="card-title" href="{% url 'workspace' project_name=project.name %}"><h5 class="mb-0">{{ project.name }}</h5></a>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+    {% else %}
+        <h1>Please log in to view your projects.</h1>
+        <a href="{% url 'login' %}" class="btn btn-primary">Login</a>
+    {% endif %}
+{% endblock %}

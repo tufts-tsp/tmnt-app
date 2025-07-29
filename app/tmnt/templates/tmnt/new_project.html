@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}New Project{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <h1>Create a New Project</h1>
+        <form method="post" action="{% url 'create_project' %}">
+            {% csrf_token %}
+            {{ form.as_p }}
+            {{ form.non_field_errors }}
+{#            <div class="mb-3">#}
+{#                <label for="project_name" class="form-label">Project Name</label>#}
+{#                <input type="text" class="form-control" id="project_name" name="project_name" required>#}
+{#            </div>#}
+{#            <div class="mb-3">#}
+{#                <label for="project_description" class="form-label">Project Description</label>#}
+{#                <textarea class="form-control" id="project_description" name="project_description" rows="3"></textarea>#}
+{#            </div>#}
+            <button type="submit" class="btn btn-primary">Create Project</button>
+        </form>
+        <a href="{% url 'view_projects' %}" class="btn btn-secondary mt-3">Back to Projects</a>
+    </div>
+{% endblock %}
+

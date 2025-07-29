@@ -752,12 +752,16 @@ function addElement(asset_type) {
                 $.ajax({
                     type: "POST",
                     url: addEntityUrl,
+                    headers: {
+                        "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value, // Or get it from a cookie if using jQuery cookie plugin
+                    },
                     data: {
                         name: asset_name,
                         type: "Actor",
                         actor_type: document.getElementById("actor_type").value,  // TODO: I think actor_type goes away
                         actor_access: document.getElementById("actor_access").value,
-                        priv_level: "Not implemented"  // TODO: fill in with privilege level
+                        priv_level: "Not implemented",  // TODO: fill in with privilege level
+                        project_name: projectName,
                     },
                     dataType: "html",
                     success: function(result){
@@ -783,9 +787,13 @@ function addElement(asset_type) {
             $.ajax({
                 type: "POST",
                 url: addEntityUrl,
+                headers: {
+                        "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value, // Or get it from a cookie if using jQuery cookie plugin
+                },
                 data: {
                     name: asset_name,
-                    type: "Server"
+                    type: "Server",
+                    project_name: projectName,
                 },
                 data_type: "html",
                 success: function(result){
@@ -837,6 +845,9 @@ function addElement(asset_type) {
                 $.ajax({
                     type: "POST",
                     url: addEntityUrl,
+                    headers: {
+                        "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value, // Or get it from a cookie if using jQuery cookie plugin
+                    },
                     data: {
                         actor_names: document.getElementById("act_name").value,  // TODO: turn this into a list
                         boundary_name: document.getElementById("boundary_name").value,  // TODO: turn this into a list
@@ -845,6 +856,7 @@ function addElement(asset_type) {
                         open_ports: document.getElementById("o_port").value,
                         machine_type: document.getElementById("machine_type").value,
                         ds_type: document.getElementById("datastore_type").value,
+                        project_name: projectName,
                     },
                     data_type: "html",
                     
@@ -870,9 +882,13 @@ function addElement(asset_type) {
             $.ajax({
                 type: "POST",
                 url: addEntityUrl,
+                headers: {
+                        "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value, // Or get it from a cookie if using jQuery cookie plugin
+                },
                 data: {
                     name: asset_name,
-                    type: "Process"
+                    type: "Process",
+                    project_name: projectName,
                 },
                 data_type: "html",
                 success: function(result){
@@ -900,12 +916,16 @@ function addElement(asset_type) {
                 $.ajax({
                     type: "POST",
                     url: addExternalAssetUrl,
+                    headers: {
+                        "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value, // Or get it from a cookie if using jQuery cookie plugin
+                    },
                     data: {
                         trust_boundaries: [],
                         name: asset_name,
                         type: "ExtAsset",
                         open_port: document.getElementById("o_port").value,
-                        machine: document.getElementById("machine_type").value
+                        machine: document.getElementById("machine_type").value,
+                        project_name: projectName,
                     },
                     data_type: "json",
                     
@@ -932,9 +952,13 @@ function addElement(asset_type) {
             $.ajax({
                 type: "POST",
                 url: addEntityUrl,
+                headers: {
+                    "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value, // Or get it from a cookie if using jQuery cookie plugin
+                },
                 data: {
                     name: asset_name,
                     type: "Lambda",
+                    project_name: projectName,
                 },
                 data_type: "html",
                 success: function(result){
@@ -1477,11 +1501,15 @@ function assocThreatAndControl(threat_name, control_name, asset_name, disassocia
     $.ajax({
         type: "POST",
         url: editControlUrl,
+        headers: {
+            "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value,
+        },
         data: {
             change: change_type,
             threat_name: threat_name,
             control_name: control_name,
             asset_name: asset_name,  // current asset name
+            project_name: projectName,
         },
         dataType: "html",
         // success: function(result){
@@ -2087,7 +2115,10 @@ function createAssetOptions() {
                     $.ajax({  // update model
                         type: "POST",
                         url: deleteControlUrl,
-                        data: {name: controls[i].control_title,},
+                        headers: {
+                            "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        },
+                        data: {name: controls[i].control_title, project_name: projectName},
                         data_type: "html",
                         success: function(result){
                             if (result !== 200) {alert("Error deleting control. Received: " + result);}
@@ -2304,15 +2335,16 @@ function createAssetOptions() {
         $.ajax({
             type: "POST",
             url: deleteAssetUrl,
+            headers: {
+                "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
             data: {
                 index: node_index,
                 name: nodes[node_index].asset_name,
                 type: nodes[node_index].asset_type,
+                project_name: projectName,
             },
             dataType: "html",
-            // success: function(result){
-            //     alert("Success");
-            // },
         });
 
         nodes.splice(nodeIndex(assetID), 1);
@@ -2964,18 +2996,19 @@ function addDataFlow() {
     $.ajax({
         type: "POST",
         url: addEntityUrl,
+        headers: {
+            "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value,
+        },
         data: {
             name: dataflow_name,
             type: "Dataflow",
             source: nodes[source].asset_name,
             target: nodes[target].asset_name,
             protocol: "",  // TODO: implement protocol and comments
-            comments: ""
+            comments: "",
+            project_name: projectName,
         },
         dataType: "html",
-        // success: function(result){
-        //     alert("Added dataflow.");
-        // },
         error: res => {
             console.error("Error adding dataflow:", res);
             alert("Error adding dataflow!");
@@ -3845,23 +3878,27 @@ function createTrustBoundary() {
     }
     console.debug(asset_names);
     $.ajax({
-                    type: "POST",
-                    url: addEntityUrl,
-                    data: {
-                        name: boundary_name,
-                        type: "Boundary",
-                        // actor_type: document.getElementById("actor_type").value,
-                        // actor_access: document.getElementById("actor_access").value,
-                        actor_name: "",
-                        actor_type: "",
-                        entity_names: asset_names,
-                        comments: ""
-                    },
-                    dataType: "html",
-                    success: function(result){
-                        alert("Success");
-                    },
-                });
+        type: "POST",
+        url: addEntityUrl,
+        headers: {
+            "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value,
+        },
+        data: {
+            name: boundary_name,
+            type: "Boundary",
+            // actor_type: document.getElementById("actor_type").value,
+            // actor_access: document.getElementById("actor_access").value,
+            actor_name: "",
+            actor_type: "",
+            entity_names: asset_names,
+            comments: "",
+            project_name: projectName,
+        },
+        dataType: "html",
+        success: function(result){
+            alert("Success");
+        },
+    });
 }
 
 function loadTrustBoundary(boundary_name) {
@@ -3972,7 +4009,10 @@ function clearDfd() {
     $.ajax({
         type: "POST",
         url: deleteAllAssetsUrl,
-        data: {},
+        headers: {
+            "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value,
+        },
+        data: {project_name: projectName},
         data_type: "html",
         success: function(result){
             alert("Deleted all assets.");
@@ -4033,6 +4073,9 @@ function addThreat(title, cve_num, description, stride_class, mitigated = false)
         $.ajax({
         type: "POST",
         url: addThreatUrl,
+            headers: {
+                "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
         data: {
             name: title,
             assets: selected_assets.map(node => node.asset_name),
@@ -4040,6 +4083,7 @@ function addThreat(title, cve_num, description, stride_class, mitigated = false)
             stride_class: stride_class,
             severity: "",  // TODO: add severity functionality
             description: description,
+            project_name: projectName,
         },
         data_type: "html",
         success: function(result){
@@ -4093,8 +4137,12 @@ function deleteThreat(threat_name) {
     $.ajax({
         type: "POST",
         url: deleteThreatUrl,
+        headers: {
+            "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value,
+        },
         data: {
             name: threat_name,
+            project_name: projectName,
         },
         data_type: "html",
         success: function(result){
@@ -4220,10 +4268,14 @@ function addControl(control_title, control_description, mitigated = false) {
         $.ajax({
             type: "POST",
             url: addControlUrl,
+            headers: {
+                "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
             data: {
                 name: title,
                 assets: selected_assets.map(node => node.asset_name),
                 description: description,
+                project_name: projectName,
             },
             data_type: "html",
             success: function(result){
@@ -4301,15 +4353,18 @@ function addAssumption(text) {
     //     return;
     // }
     const assumption_text = new_assumption? document.getElementById("assumption_description").value : text;
-    // TODO: do something for loading an assumption or storing it somewhere
     assumptions.push({"text": assumption_text, "assets": selected_assets.map(node => node.asset_name)});
     if (new_assumption) {
         $.ajax({
             type: "POST",
             url: addAssumptionUrl,
+            headers: {
+                "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
             data: {
                 assets: selected_assets.map(node => node.asset_name),
                 description: assumption_text,
+                project_name: projectName,
             },
             data_type: "html",
             success: function(result){
