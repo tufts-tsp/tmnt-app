@@ -31,6 +31,8 @@ urlpatterns = [
     path("api/load_dfd/<str:project_name>", views.load_dfd, name="api/load_dfd"),
     path("view_projects/", views.project_list, name="view_projects"),
     path("create_project/", views.create_project, name="create_project"),
+    path("delete_project/<str:project_name>", views.delete_project, name="delete_project"),
+    path("edit_project/<str:project_name>", views.edit_project, name="edit_project"),
     path("admin/", admin.site.urls),
     path("register/", SignUpView.as_view(), name="register"),
     path("accounts/", include("django.contrib.auth.urls")),  # For login/logout

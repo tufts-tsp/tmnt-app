@@ -1,0 +1,49 @@
+<!-- Modal used for project management -->
+{#<div class="modal fade" id="projectMgmtModal" tabindex="-1" aria-labelledby="projectMgmtModalLabel" aria-hidden="true">#}
+{#    <div class="modal-dialog">#}
+{#        <div class="modal-content">#}
+{#            <div class="modal-header">#}
+{#                <h5 class="modal-title" id="projectMgmtModalLabel">Edit Project</h5>#}
+{#                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>#}
+{#            </div>#}
+{#            <form action="{% url 'edit_project' %}" method="post">#}
+{#                <div class="modal-body">#}
+{#                    {% csrf_token %}#}
+{#                    <div class="mb-3">#}
+{#                        <label for="projectName" class="form-label">Project Name</label>#}
+{#                        <input type="text" class="form-control" id="projectName" name="name" value="{{ project.name }}" required>#}
+{#                    </div>#}
+{#                </div>#}
+{#                <div class="modal-footer">#}
+{#                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>#}
+{#                    <button type="submit" class="btn btn-primary">Save Changes</button>#}
+{#                    <form action="{% url 'delete_project' %}" method="post" class="d-inline">#}
+{#                        {% csrf_token %}#}
+{#                        <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this project?');">Delete Project</button>#}
+{#                    </form>#}
+{#                </div>#}
+{#            </form>#}
+{#        </div>#}
+{#    </div>#}
+{#</div>#}
+
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Edit Project{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <h2>Edit Project</h2>
+        <form method="post" action="{% url 'edit_project' project_name=project_name %}">
+            {% csrf_token %}
+            {{ form.as_p }}
+            {{ form.non_field_errors }}
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+        </form>
+        <form action="{% url 'delete_project' project_name=project_name %}" method="post" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this project?');">Delete Project</button>
+        </form>
+        <a href="{% url 'view_projects' %}" class="btn btn-secondary mt-3">Back to Projects</a>
+    </div>
+{% endblock %}

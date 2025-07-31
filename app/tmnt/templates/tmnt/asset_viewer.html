@@ -320,21 +320,21 @@
     const projectName = "{{ project_name|escapejs }}";
     const username = "{{ user.username|escapejs }}";
     // Generating URLs for AJAX POST calls
-    var addEntityUrl = "{%  url 'api/add_entity' %}"
-    var addExternalAssetUrl = "{% url 'api/add_externalasset' %}";
-    var editBoundaryUrl = "{% url 'api/edit_boundary' %}";
-    var deleteAssetUrl = "{% url 'api/delete_asset' %}";
-    var deleteAllAssetsUrl = "{%  url 'api/delete_all_assets' %}";
-    var loadDfdUrl = "{% url 'api/load_dfd' project_name=project_name %}";
-    var addThreatUrl = "{% url 'api/add_threat' %}";
-    var editThreatUrl = "{% url 'api/edit_threat' %}";
-    var deleteThreatUrl = "{% url 'api/delete_threat' %}";
-    var addAssumptionUrl = "{% url 'api/add_assumption' %}";
-    var editAssumptionUrl = "{% url 'api/edit_assumption' %}";
-    var deleteAssumptionUrl = "{% url 'api/delete_assumption' %}";
-    var addControlUrl = "{% url 'api/add_control' %}";
-    var editControlUrl = "{% url 'api/edit_control' %}";
-    var deleteControlUrl = "{% url 'api/delete_control' %}";
+    const addEntityUrl = "{%  url 'api/add_entity' %}"
+    const addExternalAssetUrl = "{% url 'api/add_externalasset' %}";
+    const editBoundaryUrl = "{% url 'api/edit_boundary' %}";
+    const deleteAssetUrl = "{% url 'api/delete_asset' %}";
+    const deleteAllAssetsUrl = "{%  url 'api/delete_all_assets' %}";
+    const loadDfdUrl = "{% url 'api/load_dfd' project_name=project_name %}";
+    const addThreatUrl = "{% url 'api/add_threat' %}";
+    const editThreatUrl = "{% url 'api/edit_threat' %}";
+    const deleteThreatUrl = "{% url 'api/delete_threat' %}";
+    const addAssumptionUrl = "{% url 'api/add_assumption' %}";
+    const editAssumptionUrl = "{% url 'api/edit_assumption' %}";
+    const deleteAssumptionUrl = "{% url 'api/delete_assumption' %}";
+    const addControlUrl = "{% url 'api/add_control' %}";
+    const editControlUrl = "{% url 'api/edit_control' %}";
+    const deleteControlUrl = "{% url 'api/delete_control' %}";
 </script>
 <script type="text/javascript" src="{% static 'scripts/interface.js' %}"></script>
 {% else %}

@@ -10,36 +10,41 @@ class Project(models.Model):
 
     def __str__(self):
         return self.name
-
     class Meta:
         constraints = [models.UniqueConstraint(fields=['name', 'user'], name='unique_name_per_user')]
 
 class Entity(models.Model):
     # Actor, Server, Process, Lambda, TrustBoundary, DataStore, ExtAsset all inherit this class
-    name = models.CharField(max_length=100, unique=True, null=False)
+    name = models.CharField(max_length=100, null=False)
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     comments = models.TextField(blank=True)
     type = models.CharField(max_length=15, null=False)
 
     def __str__(self):
         return self.name
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['name', 'project'], name='entity_name_unique_to_project')]
 
 class Actor(models.Model):
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=100)
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     parent_entity = models.ForeignKey(Entity, on_delete=models.CASCADE, related_name='parent_actor')
     priv_level = models.CharField(max_length=100)  # may want predefined values
 
     def __str__(self):
         return self.name
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['name', 'project'], name='actor_name_unique_to_project')]
 
 class TrustBoundary(models.Model):
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=100)
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     entities = models.ManyToManyField(Entity)
     actor_type = models.CharField(max_length=100)
     actor_name = models.CharField(max_length=100)  # maybe should be ref to Actor class
     comments = models.TextField(blank=True)
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['name', 'project'], name='tb_name_unique_to_project')]
 
 class Datastore(Entity):
     # name = models.CharField(max_length=100, null=False)
@@ -52,12 +57,14 @@ class Datastore(Entity):
     # type = models.CharField(max_length=15, null=False, default="Datastore")
 
 class ExtAsset(models.Model):
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=100)
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     parent_entity = models.ForeignKey(Entity, on_delete=models.CASCADE, related_name='parent_extasset')
     ports = models.CharField(max_length=400)  # expecting comma-separated list of integers
     machine_type = models.CharField(max_length=100)
     type = models.CharField(max_length=15, null=False, default="External Entity")
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['name', 'project'], name='extasset_name_unique_to_project')]
 
 class DataFlow(models.Model):
     source = models.ForeignKey(Entity, on_delete=models.CASCADE, related_name='source_entity')
@@ -84,7 +91,7 @@ class Assumption(models.Model):
     threats = models.ManyToManyField(Threat)
 
 class Control(models.Model):
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=100)
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     description = models.TextField(blank=True)
     threats = models.ManyToManyField(Threat)

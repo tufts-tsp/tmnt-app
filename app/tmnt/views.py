@@ -46,7 +46,7 @@ class SignUpView(CreateView):
 @login_required
 def project_list(request):
     # return a queryset of projects associated with the user
-    projects = request.user.my_projects.all().order_by("-created_at")[:10]  # get last 10 projects
+    projects = Project.objects.filter(user=request.user).order_by("-created_at")[:10]  # get last 10 projects
     print(type(projects))
     return render(request, "tmnt/projects.html", locals())
 
@@ -60,6 +60,7 @@ def create_project(request):
                 form.add_error(
                     "name", "A project with this name already exists for this user."
                 )
+                return render(request, "tmnt/new_project.html", {"form": form})
             else:
                 project = form.save(commit=False)
                 project.user = request.user
@@ -72,6 +73,35 @@ def create_project(request):
     else:
         form = NewProjectForm()
         return render(request, "tmnt/new_project.html", {"form": form})
+
+@login_required
+def delete_project(request, project_name):
+    project = get_object_or_404(Project, name=project_name, user=request.user)
+    project.delete()
+    # redirect to project list after deletion
+    return HttpResponseRedirect('/view_projects/')
+
+@login_required
+def edit_project(request, project_name):
+    if request.method == "POST":
+        project = get_object_or_404(Project, name=project_name, user=request.user)
+        form = NewProjectForm(request.POST, instance=project)
+        if form.is_valid():
+            # check if project with same name already exists for this user
+            if Project.objects.filter(name=form.cleaned_data['name'], user=request.user).exclude(id=project.id).exists():
+                form.add_error(
+                    "name", "A project with this name already exists for this user."
+                )
+            else:
+                form.save()
+            return HttpResponseRedirect('/view_projects/')
+        else:
+            # if form is not valid, render the form again with errors
+            return render(request, "tmnt/edit_project.html", {"form": form, "project_name": project_name})
+    else:
+        project = get_object_or_404(Project, name=project_name, user=request.user)
+        form = NewProjectForm(instance=project)
+        return render(request, "tmnt/edit_project.html", {"form": form, "project_name": project_name})
 
 # view for uploading file
 def upload_file(request):
@@ -133,7 +163,7 @@ def upload_file(request):
 
 
 def workspace(request, project_name):
-    print('User:', request.user)
+    # print('User:', request.user)
     project_name = get_object_or_404(Project, name=project_name, user=request.user)
     return render(request, "tmnt/asset_viewer.html", locals())
 
@@ -169,9 +199,8 @@ def add_entity(request):
 def add_entity_actor(request, project: Project) -> int:
     actor_name = request.POST.get("name")
     actor_type = request.POST.get("actor_type")
-    # project = get_object_or_404(Project, name=request.POST.get("project_name"), user=request.user)
-    print(actor_name)
-    print(actor_type)
+    # print(actor_name)
+    # print(actor_type)
     # update model
     priv_level = request.POST.get("priv_level")  # ADD FIELD TO REQUEST
 
@@ -374,7 +403,7 @@ def add_threat(request):
         threat = Threat(name=name, project=project, stride_class=stride_class, cve_id=cve_id, severity=severity, description=description)
         threat.save()
         entities = Entity.objects.filter(name__in=assets, project=project)
-        print(entities)
+        # print(entities)
         threat.assets.add(*entities)
         threat.save()
         ua = UserAction(username=request.user, project=project, action=f'create threat', entities=name, details=f'Assets: {assets}; STRIDE: {stride_class}; Severity: {severity}; Descr: {description}')
@@ -517,13 +546,13 @@ def load_dfd(request, project_name):
         # mitigated = Control.objects.get(name=c['name']).threats.exists()
         # create a list called "mitigated_assets" that contains the names of all assets that are associated with this control stored in models.MitigatedThreat
         mitigated_assets = list(MitigatedThreat.objects.filter(control__name=c['name'], project=project).values_list('asset__name', flat=True))
-        print('mitigated assets:', mitigated_assets)
+        # print('mitigated assets:', mitigated_assets)
         controls.append({'name': c['name'], 'description': c['description'], 'assets': control_assets, 'mitigated_assets': mitigated_assets})
     assumptions = []
     for a in list(Assumption.objects.filter(project=project).values('comments')):
         assumptions.append({'comments': a['comments'], 'assets': [obj.name for obj in Assumption.objects.get(comments=a['comments']).assets.all()], 'threats': [obj.name for obj in Assumption.objects.get(comments=a['comments']).threats.all()]})
-    print(list(MitigatedThreat.objects.filter(project=project).values('asset__name', 'threat__name', 'control__name')))
-    data = {'entity': list(Entity.objects.values()),
+    # print(list(MitigatedThreat.objects.filter(project=project).values('asset__name', 'threat__name', 'control__name')))
+    data = {'entity': list(Entity.objects.filter(project=project).values()),
             'boundary': boundary,
             'dataflow': list(DataFlow.objects.filter(project=project).values('source__name', 'dest__name')),
             'threats': threats,

@@ -176,6 +176,8 @@ window.onload = function() {
             resetBottomBar();
         }
     });
+
+    setTimeout(loadDfd, 0);  // load the DFD from the server
 };
 
 // Toggles the collapsible bottom bar 
@@ -255,10 +257,10 @@ function showSection(icon) {
             elem.disabled = (nodes.length === 0);
         }
     }
-    const elems = document.getElementsByClassName('add_button'); // TODO: this disables some testing buttons
-    for (let elem of elems) {
-        elem.disabled = (nodes.length === 0);
-    }
+    // const elems = document.getElementsByClassName('add_button'); // this disables some testing buttons
+    // for (let elem of elems) {
+    //     elem.disabled = (nodes.length === 0);
+    // }
 
     // Recalculate dropdowns when findings tab is opened
     if (icon === "findings") {
@@ -4321,7 +4323,7 @@ function showAssumpDetailPanel(assumption) {
         return;
     }
     // display names of affected assets, if any
-    document.getElementById("affected_entities").innerText = a.assets.length > 0? a.assets.join(", ") : "No assets affected";
+    document.getElementById("affected_entities").innerText = a.assets.length > 0? a.assets.join(", ") : "No assets selected";
     // display the assumption text
     document.getElementById("assumption_text").innerText = a.text;
     // TODO: buttons to edit, delete
@@ -4376,6 +4378,7 @@ function addAssumption(text) {
                 alert("Error storing newly created assumption. Received: " + error);
             }
         });
+        document.getElementById("assumption_description").value = "";  // clear the textbox
         displayAllAssumptions();
     }
 }
