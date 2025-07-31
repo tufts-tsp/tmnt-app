@@ -1,0 +1,33 @@
+<!-- Modal used for entering new entity information -->
+<div class="modal fade" id="newEntityModal" tabindex="-1" aria-labelledby="newEntityModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="newEntityModalLabel">New Entity Information</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <span id="newEntityNameSpan">Enter object's name:</span><br>
+                <input id="newEntityNameInput" class="newEntity" type="text"><br>
+                <div id="actorFields" class="newEntityFields">
+                    <label for="actor_type">What is the Actor's type?</label><br><input id="actor_type" class="newEntity" type="text" placeholder="New User"><br>
+                    <span>Does the user have physical access?</span><br><select id="actor_access"><option value="No">No</option><option value="Yes">Yes</option></select>
+                </div>
+                <div id="dataStoreFields" class="newEntityFields">
+                    <span>What are the associated open ports? (include comma separated list)</span><br>
+                    <input id="o_port" class="newEntity"  type="text" placeholder="ex.: 22,53"><br>
+                    <span>What is the associated machine's type?</span><br>
+                    <input id="machine_type" class="newEntity" type="text" placeholder="ex.: Physical"><br>
+                    <div id="dsOnly" class="newEntityFields">
+                        <span>What is the datastore's type?</span><br>
+                        <input id="datastore_type" class="newEntity" type="text" placeholder="ex.: NOSQL">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" id="form_done">Add Entity</button>
+            </div>
+        </div>
+    </div>
+</div>

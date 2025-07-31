@@ -7,9 +7,9 @@ const boundaries = {};
 let threats = {};
 let controls = {};
 let assumptions = [];
-let svg;
-let container;
-let simulation;
+var svg;
+var container;
+var simulation;
 let dfd_svg_fraction = 0.72;
 
 let multiselect = false;  // toggles whether multiple nodes can be selected
@@ -159,7 +159,7 @@ window.onload = function() {
         .extent([[0, 0], [area.width, area.height]])       // ← tell D3 the “logical” viewport
         .translateExtent([[0, 0], [area.width, area.height]]) // optional: clamp panning
         .scaleExtent([0.5, 5])
-        .on('zoom', transform => {
+        .on('zoom', ({transform}) => {
             container.attr('transform', transform);
         });
     svg.call(zoomBehavior);
@@ -488,16 +488,14 @@ function loadElement(asset_type, asset_name) {
     // Add new node to nodes array
     const rand_x = area.width/2 + Math.random()*5 - 10;
     const rand_y = area.height/2 + Math.random()*5 - 10;
-    const threats = [[],[],[]];
-    const controls = [[],[],[]];
     nodes.push({
         "id": total_nodes,
         "asset_type": asset_type,
         "asset_name": asset_name,
         'x': rand_x,
         'y': rand_y,
-        "threats": threats,
-        "controls": controls,
+        "threats": [[],[],[]],
+        "controls": [[],[],[]],
         "selected": false
     })
     total_nodes++;
@@ -655,102 +653,22 @@ function loadElement(asset_type, asset_name) {
 // When an Asset button is clicked, this function creates a corresponding
 // node, then pushes it to the list of nodes for d3 to draw at a later step.
 function addElement(asset_type) {
-    // Make sure no other elements are still in the process of being created
-    if (document.getElementById("asset_info_form").style.display === "block") {
-        alert("Finish adding element first!");
-        return;
-    }
+    document.querySelectorAll('.newEntityFields').forEach(elem => {elem.style.display = "none";});
+    document.querySelectorAll('.newEntity').forEach(elem => {elem.value = "";});  // clear all input fields
+    document.getElementById("newEntityModalLabel").innerText = "Creating New " + asset_type;  // update the new entity name span
+    // show the newEntityModal
+    $('#newEntityModal').modal('show');  // show the modal
 
-    // Prompt user for asset name
-    let area = d3.select('.dfd_assetview').node().getBoundingClientRect();
-
-    let asset_name = window.prompt("Name this object:", "New " + asset_type);
-    if (asset_name == null)
-        return;
-    
-    // Prevent duplicate asset names
-    if (nodes.map(a => a.asset_name).includes(asset_name)) {
-        alert("All assets must have unique names!");
-        return;
-    }
-
-    // Add new node to nodes array
-    let rand_x = area.width/2 + Math.random()*5 - 10;
-    let rand_y = area.height/2 + Math.random()*5 - 10;
-
-    // deep cloning hard coded suggested threats and controls
-    // let threats = [[JSON.parse(JSON.stringify(threat_suggest[0])), JSON.parse(JSON.stringify(threat_suggest[1])), JSON.parse(JSON.stringify(threat_suggest[2]))], [], []];
-    // let controls = [[JSON.parse(JSON.stringify(control_suggest[0])), JSON.parse(JSON.stringify(control_suggest[1])), JSON.parse(JSON.stringify(control_suggest[2]))], [], []];
-    let threats = [[], [], []];
-    let controls = [[], [], []];
-    nodes.push({
-        "id": total_nodes,
-        "asset_type": asset_type,
-        "asset_name": asset_name,
-        'x': rand_x,
-        'y': rand_y,
-        "threats": threats,
-        "controls": controls,
-        "selected": false
-    })
-    total_nodes++;
-
-    if (asset_type === "Actor" || asset_type === "External Entity") {
-        nodes[nodes.length - 1].boundaries = [];
-    }
-
-    // Select every node and attach it to an asset
-    var node_update = container.selectAll(".node_group")
-        .data(simulation.nodes(), function (d) {return d.id});
-
-    // node.enter() gets every NEWLY ADDED node.
-    // For each of these, append a node_group g to the new node...
-    let node_group = node_update.enter().append("g")
-        .on("click", clicked)
-        .attr("class", "node_group")
-        .call(d3.drag().on("drag", dragged));
-        // TODO maybe add a dragend that selects the node if the drag is tiny?
-        // that way small drags are still registered as clicks for selection
-
-    // Change onclick if currently adding a trust boundary
-    if (document.getElementById("cancel_button")) {
-        node_group.on("click", function(d) {
-            let selected_node = d3.select(this).data()[0];
-            if (selected_node.selected) {
-                d3.select(this).selectAll(".asset")
-                .style("stroke", "black")
-                .style("stroke-width", "1");
-            }
-            else {
-                d3.select(this).selectAll(".asset")
-                .style("stroke", "#3E8EDE")
-                .style("stroke-width", "4");
-            }
-            selected_node.selected = !selected_node.selected;
-        });
-    }
-
-    var form = document.getElementById("asset_info_form");
-
-    // ...attach a shape to that group...
-    // (big switch statement to decide the proper shape for asset_type)
     switch (asset_type) {
         case "Actor":
-            node_group
-            .append('rect')
-            .attr('class', 'asset')
-            .attr('x', -30)
-            .attr('y', -30)
-            .attr('width', 60)
-            .attr('height', 60)
-            .style('fill', 'white')
-            .style('stroke', 'black');
-            
-            // Generate popup form to get more asset information
-            form.style.display = "block";
-            form.innerHTML = "<span style=\"font-weight:bold\">" + asset_name + "</span><br><span>What is the Actor's type?</span><br><input id=\"actor_type\" type=\"text\" value=\"New User\"><br><span>Does the user have physical access?</span><br><select id=\"actor_access\"><option value=\"No\">No</option><option value=\"Yes\">Yes</option></select><br><button id=\"form_done\">Done</button>";
-            
+            document.getElementById("actorFields").style.display = "block";  // show the Actor only fields
             document.getElementById("form_done").onclick = function () {
+                $('#newEntityModal').modal('hide');
+                const asset_name = document.getElementById("newEntityNameInput").value;
+                if (nodes.map(a => a.asset_name).includes(asset_name)) {
+                    alert("Another entity has the name " + asset_name + "!");
+                    return;
+                }
                 $.ajax({
                     type: "POST",
                     url: addEntityUrl,
@@ -767,83 +685,23 @@ function addElement(asset_type) {
                     },
                     dataType: "html",
                     success: function(result){
-                        alert("Success");
+                        // alert("Success");
+                        loadElement("Actor", asset_name);
                     },
+                    error: function(xhr, status, error) {
+                        alert("Error adding Actor: " + error);
+                    }
                 });
-                form.style.display = "none";
             }
-            
-            
             break;
         case "Server":
-            node_group
-            .append('rect')
-            .attr('class', 'asset')
-            .attr('x', -30)
-            .attr('y', -30)
-            .attr('width', 60)
-            .attr('height', 60)
-            .style('fill', 'white')
-            .style('stroke', 'black');
-
-            $.ajax({
-                type: "POST",
-                url: addEntityUrl,
-                headers: {
-                        "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value, // Or get it from a cookie if using jQuery cookie plugin
-                },
-                data: {
-                    name: asset_name,
-                    type: "Server",
-                    project_name: projectName,
-                },
-                data_type: "html",
-                success: function(result){
-                    alert("Success");
-                },
-            });
-
-            break;
-            
-        case "Data Store":
-            let radX = 30;
-            let radY = 15;
-
-            node_group
-            .append('rect')
-            .attr('class', 'asset')
-            .attr('x', 0 - radX)
-            .attr('y', -1.5*radY)
-            .attr('width', radX*2)
-            .attr('height', radY*3)
-            .style('fill', 'white')
-            .style('stroke', 'black');
-
-            node_group
-            .append('ellipse')
-            .attr('class', 'asset')
-            .attr('cx', 0)
-            .attr('cy', -1.5*radY)
-            .attr('rx', radX)
-            .attr('ry', radY)
-            .style('fill', 'white')
-            .style('stroke', 'black');
-
-            node_group
-            .append('ellipse')
-            .attr('class', 'asset')
-            .attr('cx', 0)
-            .attr('cy', 1.5*radY)
-            .attr('rx', radX)
-            .attr('ry', radY)
-            .style('fill', 'white')
-            .style('stroke', 'black');
-
-            // Generate popup form to get more asset information
-            form.style.display = "block";
-            form.innerHTML = "<span style=\"font-weight:bold\">" + asset_name + "</span><br><span>What are the associated open ports? (include comma separated list)</span><br><input id=\"o_port\" type=\"text\" value=\"22,53\"><br><span>Who is the associated Actor?</span><br><input id=\"act_name\" type=\"text\" value=\"New Actor\"><br><span>What is the associated trust boundary's name?</span><br><input id=\"boundary_name\" type=\"text\" value=\"New Trust Boundary\"><br><span>What is the associated machine's type?</span><br><input id=\"machine_type\" type=\"text\" value=\"Physical\"><br><span>What is the datastore's type?</span><br><input id=\"datastore_type\" type=\"text\" value=\"NOSQL\"><br><button id=\"form_done\">Done</button>";
-            
             document.getElementById("form_done").onclick = function () {
+                const asset_name = document.getElementById("newEntityNameInput").value;
+                $('#newEntityModal').modal('hide');
+                if (nodes.map(a => a.asset_name).includes(asset_name)) {
+                    alert("Another entity has the name " + asset_name + "!");
+                    return;
+                }
                 $.ajax({
                     type: "POST",
                     url: addEntityUrl,
@@ -851,8 +709,38 @@ function addElement(asset_type) {
                         "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value, // Or get it from a cookie if using jQuery cookie plugin
                     },
                     data: {
-                        actor_names: document.getElementById("act_name").value,  // TODO: turn this into a list
-                        boundary_name: document.getElementById("boundary_name").value,  // TODO: turn this into a list
+                        name: asset_name,
+                        type: "Server",
+                        project_name: projectName,
+                    },
+                    data_type: "html",
+                    success: function(result){
+                        // alert("Success");
+                        loadElement("Server", asset_name);
+                    },
+                });
+            }
+            break;
+            
+        case "Data Store":
+            document.getElementById("dsOnly").style.display = "block";  // show the Data Store only fields
+            document.getElementById("dataStoreFields").style.display = "block";
+            document.getElementById("form_done").onclick = function () {
+                const asset_name = document.getElementById("newEntityNameInput").value;
+                $('#newEntityModal').modal('hide');
+                if (nodes.map(a => a.asset_name).includes(asset_name)) {
+                    alert("Another entity has the name " + asset_name + "!");
+                    return;
+                }
+                $.ajax({
+                    type: "POST",
+                    url: addEntityUrl,
+                    headers: {
+                        "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value, // Or get it from a cookie if using jQuery cookie plugin
+                    },
+                    data: {
+                        actor_names: "",
+                        boundary_name: "",
                         name: asset_name,
                         type: "Datastore",
                         open_ports: document.getElementById("o_port").value,
@@ -863,58 +751,53 @@ function addElement(asset_type) {
                     data_type: "html",
                     
                     success: function(result){
-                        alert("Success");
+                        // alert("Success");
+                        loadElement("Data Store", asset_name);
                     },
+                    error: function(xhr, status, error) {
+                        alert("Error adding Data Store: " + error);
+                    }
                 });
-                form.style.display = "none";
             }
-            
-            
             break;
         case "Process":
-            node_group
-            .append('circle')
-            .attr('class', 'asset')
-            .attr('cx', 0)
-            .attr('cy', 0)
-            .attr('r', 30)
-            .style('fill', 'white')
-            .style('stroke', 'black');
-            
-            $.ajax({
-                type: "POST",
-                url: addEntityUrl,
-                headers: {
+            document.getElementById("form_done").onclick = function () {
+                const asset_name = document.getElementById("newEntityNameInput").value;
+                $('#newEntityModal').modal('hide');
+                if (nodes.map(a => a.asset_name).includes(asset_name)) {
+                    alert("Another entity has the name " + asset_name + "!");
+                    return;
+                }
+                $.ajax({
+                    type: "POST",
+                    url: addEntityUrl,
+                    headers: {
                         "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value, // Or get it from a cookie if using jQuery cookie plugin
-                },
-                data: {
-                    name: asset_name,
-                    type: "Process",
-                    project_name: projectName,
-                },
-                data_type: "html",
-                success: function(result){
-                    alert("Success");
-                },
-            });
-            
+                    },
+                    data: {
+                        name: asset_name,
+                        type: "Process",
+                        project_name: projectName,
+                    },
+                    data_type: "html",
+                    success: function(result){
+                        loadElement("Process", asset_name);
+                    },
+                    error: function(xhr, status, error) {
+                        alert("Error adding Process: " + error);
+                    }
+                });
+            }
             break;
         case "External Entity":
-            node_group
-            .append('rect')
-            .attr('class', 'asset')
-            .attr('x', -30)
-            .attr('y', -30)
-            .attr('width', 60)
-            .attr('height', 60)
-            .style('fill', 'white')
-            .style('stroke', 'black');
-            
-            // Generate popup form to get more asset information
-            form.style.display = "block";
-            form.innerHTML = "<span style=\"font-weight:bold\">" + asset_name + "</span><br><span>What are the associated open ports? (include comma separated list)</span><br><input id=\"o_port\" type=\"text\" value=\"22,53\"><br><span>What is the associated machine's type?</span><br><input id=\"machine_type\" type=\"text\" value=\"Physical\"><br><button id=\"form_done\">Done</button>";
-
+            document.getElementById("dataStoreFields").style.display = "block";
             document.getElementById("form_done").onclick = function () {
+                const asset_name = document.getElementById("newEntityNameInput").value;
+                $('#newEntityModal').modal('hide');
+                if (nodes.map(a => a.asset_name).includes(asset_name)) {
+                    alert("Another entity has the name " + asset_name + "!");
+                    return;
+                }
                 $.ajax({
                     type: "POST",
                     url: addExternalAssetUrl,
@@ -930,82 +813,48 @@ function addElement(asset_type) {
                         project_name: projectName,
                     },
                     data_type: "json",
-                    
                     success: function(result){
-                        alert("Success");
+                        loadElement("External Entity", asset_name);
                     },
+                    error: function(xhr, status, error) {
+                        alert("Error adding External Entity: " + error);
+                    }
                 });
-                form.style.display = "none";
             }
-            
             break;
         case "Lambda":
-            node_group
-            .append('text')
-            .attr('class', 'asset')
-            .attr('x', -25)
-            .attr('y', 40)
-            .attr('fill', 'white')
-            .style('stroke', 'black')
-            .style("font-size", '100pt')
-            .style('font-family', 'Calibri')
-            .text('λ');
-
-            $.ajax({
-                type: "POST",
-                url: addEntityUrl,
-                headers: {
-                    "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value, // Or get it from a cookie if using jQuery cookie plugin
-                },
-                data: {
-                    name: asset_name,
-                    type: "Lambda",
-                    project_name: projectName,
-                },
-                data_type: "html",
-                success: function(result){
-                    alert("Success");
-                },
-            });
-            
+            document.getElementById("form_done").onclick = function () {
+                const asset_name = document.getElementById("newEntityNameInput").value;
+                $('#newEntityModal').modal('hide');
+                if (nodes.map(a => a.asset_name).includes(asset_name)) {
+                    alert("Another entity has the name " + asset_name + "!");
+                    return;
+                }
+                $.ajax({
+                    type: "POST",
+                    url: addEntityUrl,
+                    headers: {
+                        "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value, // Or get it from a cookie if using jQuery cookie plugin
+                    },
+                    data: {
+                        name: asset_name,
+                        type: "Lambda",
+                        project_name: projectName,
+                    },
+                    data_type: "html",
+                    success: function(result){
+                        loadElement("Lambda", asset_name);
+                    },
+                    error: function(xhr, status, error) {
+                        alert("Error adding Lambda: " + error);
+                    }
+                });
+            }
             break;
         default:
             // should never happen
             console.debug("ERROR: addElement() got name " + name + ", which isn't recognized as a shape");
             break;
-    }
-    
-    // ...and attach name of asset, provided by user to that group
-    node_group
-        .append("text")
-        .attr("class", "asset_label")
-        .attr("x", 15)
-        .attr("y", 15)
-        .attr("text-anchor", "middle")
-        .attr("alignment-baseline", "central")
-        .attr("fill", "black")
-        .style("font-size", "16pt")
-        .text(asset_name);
-
-    // force nodes to start in the center of the canvas
-    node_group
-        .attr("transform", "translate(" + area.width/2 + "," + area.height/2 + ")")
-
-    // Also, remove any duplicate nodes.
-    node_update.exit().remove();
-
-    // Last, (re)run the force simulation
-    simulation.nodes(nodes);
-    simulation.alpha(1.0).restart();
-
-    updateAssetDropdowns();
-
-    updateThreatBadges(nodes[nodeIndex(total_nodes - 1)]);
-
-    // Update list of nodes in options dropdown
-    if (document.getElementById("options")) {
-        var curr_asset = document.getElementById("options").children[0].value;
-        document.getElementById("add_dataflow").replaceChild(createDataflowList(curr_asset), document.getElementById("dataflow_button"));
     }
 }
 

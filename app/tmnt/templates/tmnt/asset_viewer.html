@@ -5,8 +5,8 @@
 
 {% block content %}
     {% if user.is_authenticated %}
-
-{% include "registration/logout.html" %}
+        {% include "registration/logout.html" %}
+        {% include "tmnt/new_entity.html" %}
 
 <!-- Everything below the top of the screen -->
 <div class="lowerArea">
