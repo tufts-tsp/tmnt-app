@@ -27,6 +27,7 @@ urlpatterns = [
     path("api/edit_control", views.edit_control, name="api/edit_control"),
     path("api/delete_control", views.delete_control, name="api/delete_control"),
     path("api/delete_asset", views.delete_asset, name="api/delete_asset"),
+    path("api/update_node_position", views.update_node_position, name="api/update_node_position"),
     path("api/delete_all_assets", views.delete_all_assets, name="api/delete_all_assets"),
     path("api/load_dfd/<str:project_name>", views.load_dfd, name="api/load_dfd"),
     path("view_projects/", views.project_list, name="view_projects"),

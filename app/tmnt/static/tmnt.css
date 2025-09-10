@@ -15,12 +15,13 @@ h1 {
     color: #3E8EDE;
     padding-left: 20px;
     display: flex;
-    font-size: 40;
+    font-size: 40pt;
 }
 
 h2 {
-    font-size: 16pt;
-    margin: 0;
+    color: #3E8EDE;
+    font-size: 24pt;
+    margin: 2px;
 }
 
 h3 {
@@ -280,6 +281,14 @@ ul {
     box-shadow: 0 4px 16px rgba(0,0,0,0.2);
     transform: scale(1.08);
 }
+.popout_alert {
+    border: 2px solid #333;
+    transition: box-shadow 0.2s, transform 0.2s;
+}
+.popout_alert:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    transform: scale(1.08);
+}
 
 .view_button {
     height: 20px;
@@ -306,6 +315,15 @@ textarea.threat_textbox, textarea.controls_textbox, textarea.notes_textbox {
 
 .asset_text {
     vertical-align: middle;
+}
+
+.asset_card {
+    margin:4px;
+    padding:6px;
+    border-radius:6px;
+    background:#f5f5f5;
+    cursor:pointer;
+    box-shadow:0 1px 4px rgba(0,0,0,0.10);
 }
 
 select {

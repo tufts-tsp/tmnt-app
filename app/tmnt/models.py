@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 class Project(models.Model):
     name = models.CharField(max_length=100)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="my_projects")
+    experiment_mode = models.BooleanField(default=False)  # True if this is used for a research study
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -46,15 +47,15 @@ class TrustBoundary(models.Model):
     class Meta:
         constraints = [models.UniqueConstraint(fields=['name', 'project'], name='tb_name_unique_to_project')]
 
-class Datastore(Entity):
-    # name = models.CharField(max_length=100, null=False)
+class Datastore(models.Model):
+    name = models.CharField(max_length=100, null=False)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
     parent_entity = models.ForeignKey(Entity, on_delete=models.CASCADE, related_name='parent_datastore')
     actor = models.ManyToManyField(Actor)
     trust_boundaries = models.ManyToManyField(TrustBoundary)
     data_type = models.CharField(max_length=100)
     machine_type = models.CharField(max_length=100)
     ports = models.CharField(max_length=400)  # expecting comma-separated list of integers
-    # type = models.CharField(max_length=15, null=False, default="Datastore")
 
 class ExtAsset(models.Model):
     name = models.CharField(max_length=100)
@@ -106,6 +107,14 @@ class MitigatedThreat(models.Model):
 class Workflow(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     name = models.CharField(max_length=100, unique=True)
+
+class D3NodePosition(models.Model):
+    entity = models.ForeignKey(Entity, on_delete=models.CASCADE, related_name='d3_node_positions')
+    x = models.FloatField()
+    y = models.FloatField()
+
+    def __str__(self):
+        return f"Node {self.entity}: ({self.x}, {self.y})"
 
 class UserAction(models.Model):
     """

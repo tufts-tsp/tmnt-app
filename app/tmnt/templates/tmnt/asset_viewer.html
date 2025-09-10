@@ -12,13 +12,13 @@
 <div class="lowerArea">
     <!-- Left sidebar to switch between modes -->
     <div class="modeBar">
-        <img src="{% static 'assets.png' %}" width="75%" style="padding-bottom: 10px;" onclick= "showSection('assets')" title="Data Flow Diagram">
-        <img src="{% static 'warnings.png' %}" width="75%" style="padding-bottom: 10px;" onclick="showSection('threats')" title="Threats">
-        <img src="{% static 'wrench.png' %}" width="75%" style="padding-bottom: 10px;"  onclick="showSection('controls')" title="Controls">
-        <img src="{% static 'magnify.png' %}" width="75%" style="padding-bottom: 10px;" onclick="showSection('findings')" title="Findings">
+        <img src="{% static 'assets.png' %}" width="75%" style="padding-bottom: 10px;" onclick= "showSection('assets')" title="Data Flow Diagram" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Data Flow Diagram">
+        <img src="{% static 'warnings.png' %}" width="75%" style="padding-bottom: 10px;" onclick="showSection('threats')" title="Threats" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Threats">
+        <img src="{% static 'wrench.png' %}" width="75%" style="padding-bottom: 10px;"  onclick="showSection('controls')" title="Controls" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Controls">
+        <img src="{% static 'magnify.png' %}" width="75%" style="padding-bottom: 10px;" onclick="showSection('findings')" title="Findings" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Findings">
 {#        insert a horizontal break #}
         <hr>
-        <img src="{% static 'thought-cloud.svg' %}" width="75%" style="padding-bottom: 10px;" onclick="showSection('assumptions')" title="Assumptions">
+        <img src="{% static 'thought-cloud.svg' %}" width="75%" style="padding-bottom: 10px;" onclick="showSection('assumptions')" title="Assumptions" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Assumptions">
 
     </div>
 
@@ -87,8 +87,9 @@
             </div>
             <h3>(Testing buttons)</h3>
             <div id="clear">
-                <button type="button" class="add_button" onclick="loadDfd()">Load Previous DFD</button>
-                <button type="button" class="add_button" onclick="clearDfd()">Clear DFD</button>
+{#                <button type="button" class="add_button" onclick="loadDfd()">Load Previous DFD</button>#}
+{#                <button type="button" class="add_button" onclick="clearDfd()">Clear DFD</button>#}
+                <button type="button" class="add_button" onclick="storeCoordinates()">Store coordinates</button>
             </div>
 
         </div>
@@ -118,13 +119,23 @@
             <textarea class="threat_textbox" id="threat_description" name="threat_description" placeholder="(Optional) Threat description..."rows="4" cols="20"></textarea>
             <br>
                 <label for="stride_category">STRIDE category:</label>
-                <select name="stride_category" id="stride_category" class="dropdown">
+                <select name="stride_category" id="stride_category" class="dropdown" title="Select a STRIDE category">
+                    <option value="unspecified" selected>(select one)</option>
                     <option value="Spoofing">Spoofing</option>
                     <option value="Tampering">Tampering</option>
                     <option value="Repudiation">Repudiation</option>
                     <option value="Information Disclosure">Information Disclosure</option>
                     <option value="Denial of Service">Denial of Service</option>
                     <option value="Elevation of Privilege">Elevation of Privilege</option>
+                </select>
+                <br>
+                <label for="severity">Severity:</label>
+                <select name="severity" id="severity" class="dropdown" title="Select severity">
+                    <option value="unspecified" selected>(select one)</option>
+                    <option value="Critical">Critical</option>
+                    <option value="High">High</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Low">Low</option>
                 </select>
             <button type="button" class="add_button" onClick = "addThreat()">Add Threat</button></div>
             <br>
@@ -265,6 +276,7 @@
             <!-- Displaying existing assumptions -->
             <div id="display_all_assumptions">
                 <button type="button" class="add_button" id="start_adding_assump" onclick="showAddAssumpPanel()">Add new assumption</button>
+                <br>
                 <div id="assumption_container"></div>
             </div>
             <!-- Display one assumption in detail -->
@@ -335,6 +347,7 @@
     const addControlUrl = "{% url 'api/add_control' %}";
     const editControlUrl = "{% url 'api/edit_control' %}";
     const deleteControlUrl = "{% url 'api/delete_control' %}";
+    const updateNodePositionUrl = "{% url 'api/update_node_position' %}";
 </script>
 <script type="text/javascript" src="{% static 'scripts/interface.js' %}"></script>
 {% else %}

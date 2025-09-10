@@ -1,4 +1,5 @@
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from django.shortcuts import render, get_object_or_404
 from .forms import UploadDFDFileForm, NewProjectForm
 from .scripts.img_test import *
@@ -77,6 +78,9 @@ def create_project(request):
 @login_required
 def delete_project(request, project_name):
     project = get_object_or_404(Project, name=project_name, user=request.user)
+    if project.experiment_mode:
+        if not request.user.is_superuser:
+            raise PermissionDenied("You must be a superuser to delete this project.")
     project.delete()
     # redirect to project list after deletion
     return HttpResponseRedirect('/view_projects/')
@@ -92,9 +96,10 @@ def edit_project(request, project_name):
                 form.add_error(
                     "name", "A project with this name already exists for this user."
                 )
+                return render(request, "tmnt/edit_project.html", {"form": form, "project_name": project_name})
             else:
                 form.save()
-            return HttpResponseRedirect('/view_projects/')
+                return HttpResponseRedirect('/view_projects/')
         else:
             # if form is not valid, render the form again with errors
             return render(request, "tmnt/edit_project.html", {"form": form, "project_name": project_name})
@@ -239,32 +244,11 @@ def add_entity_boundary(request, project: Project) -> int:
 
 def add_entity_datastore(request, project: Project) -> int:
     name = request.POST.get("name")
-    # below not required if we're going to store ports as a comma-delimited string
-    # open_ports_str = request.POST.get("open_ports").split(",")
-    # open_ports = []
-    # for port in open_ports_str:
-    #     open_ports.append(int(port))
+    print('Datastore name:', name)
     ports = request.POST.get("open_ports")
 
     machine_type = request.POST.get("machine_type")
-    # machine = Machine.PHYSICAL
-    # if machine_type == "Virtual":
-    #     machine = Machine.VIRTUAL
-    # elif machine_type == "Container":
-    #     machine = Machine.CONTAINER
-    # elif machine_type == "Serverless":
-    #     machine = Machine.SERVERLESS
     datastore_type = request.POST.get("ds_type")
-    #
-    # trust_boundaries = [boundary]
-    # datastore_request = AddDatastoreRequest(
-    #     name=boundary_name,
-    #     open_ports=open_ports,
-    #     trust_boundary=trust_boundaries,
-    #     machine=machine,
-    #     ds_type=datastore_type,
-    # )
-    # create parent entity
     with transaction.atomic():
         parent_entity = Entity(name=name, project=project, comments='', type="Data Store")
         parent_entity.save()
@@ -526,6 +510,24 @@ def associate_control_with_threat(request, project: Project, dissociate=False):
             ua.save()
     return JsonResponse(200, safe=False)
 
+def update_node_position(request):
+    name = request.POST.get("name")
+    x = float(request.POST.get("x"))
+    y = float(request.POST.get("y"))
+    project = get_object_or_404(Project, name=request.POST.get("project_name"), user=request.user)
+    print('received entity name:', name)
+    entity = Entity.objects.get(name=name, project=project)
+    print(f'update_node_position received name: {name}, x: {x}, y: {y}')
+    try:
+        d3pos = D3NodePosition.objects.get(entity=entity)
+        d3pos.x = x
+        d3pos.y = y
+        d3pos.save()
+    except D3NodePosition.DoesNotExist:
+        d3pos = D3NodePosition(entity=entity, x=x, y=y)
+        d3pos.save()
+    return JsonResponse(200, safe=False)
+
 
 def load_dfd(request, project_name):
     project = get_object_or_404(Project, name=project_name, user=request.user)  # get unique project object
@@ -546,13 +548,18 @@ def load_dfd(request, project_name):
         # mitigated = Control.objects.get(name=c['name']).threats.exists()
         # create a list called "mitigated_assets" that contains the names of all assets that are associated with this control stored in models.MitigatedThreat
         mitigated_assets = list(MitigatedThreat.objects.filter(control__name=c['name'], project=project).values_list('asset__name', flat=True))
-        # print('mitigated assets:', mitigated_assets)
         controls.append({'name': c['name'], 'description': c['description'], 'assets': control_assets, 'mitigated_assets': mitigated_assets})
     assumptions = []
     for a in list(Assumption.objects.filter(project=project).values('comments')):
         assumptions.append({'comments': a['comments'], 'assets': [obj.name for obj in Assumption.objects.get(comments=a['comments']).assets.all()], 'threats': [obj.name for obj in Assumption.objects.get(comments=a['comments']).threats.all()]})
-    # print(list(MitigatedThreat.objects.filter(project=project).values('asset__name', 'threat__name', 'control__name')))
-    data = {'entity': list(Entity.objects.filter(project=project).values()),
+    # get entities and x,y positions (if stored)
+    entities = Entity.objects.filter(project=project).values()
+    # for each entity in entities, get its x,y position from D3NodePosition (if it exists)
+    entities_with_coords = Entity.objects.filter(project=project).select_related(None).values(
+        'name', 'type','d3_node_positions__x', 'd3_node_positions__y'
+    )
+    # TODO: this should get the x,y positions of each entity from D3NodePosition model, if corresponding entries exist
+    data = {'entity': list(entities_with_coords),
             'boundary': boundary,
             'dataflow': list(DataFlow.objects.filter(project=project).values('source__name', 'dest__name')),
             'threats': threats,

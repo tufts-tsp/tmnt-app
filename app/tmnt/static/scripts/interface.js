@@ -32,9 +32,25 @@ function displaySelectedAssets(panelName) {
     const divsToUpdate = document.querySelectorAll("div.asset_selection");
     if (typeof nodes !== "undefined" && Array.isArray(nodes)) {
         const selected = nodes.filter(node => node.selected);
-        const assetNames = selected.map(node => node.asset_name).join("\n");  // get asset names
+        // const assetNames = selected.map(node => node.asset_name).join("\n");  // get asset names
         divsToUpdate.forEach(div => {
-            div.innerText = assetNames || "No assets selected";
+        div.innerHTML = selected.map(node =>
+            `<div class="asset_card" data-asset="${node.asset_name}">${node.asset_name}</div>`
+        ).join('') || "<div>No assets selected</div>";
+
+        // Attach event listeners to each asset card
+        div.querySelectorAll('.asset_card').forEach(card => {
+            card.addEventListener('click', function() {
+                var assetName = this.getAttribute('data-asset');
+                console.debug(assetName);
+                var n = nodes.find(nd => nd.asset_name === assetName);
+                console.debug(n);
+                if (n) {
+                    n.selected = false;
+                    svg.selectAll('.node_group').filter(d => d === n).dispatch('click');
+                }
+            });
+        });
         });
     }
     else {
@@ -58,57 +74,15 @@ function displaySelectedAssets(panelName) {
         console.error("Unknown panel name: " + panelName);
     }
 }
-
-// Hard coded suggested threats and controls
-// var threat_suggest = [{
-//     "threat_num": 1,
-//     "threat_title": "Spoofing",
-//     "threat_description": "Pretending to be someone you're not.",
-//     "threat_status": "Suggested",
-//     "controls": [],
-//     "findings": null
-// },
-// {
-//     "threat_num": 2,
-//     "threat_title": "Tampering",
-//     "threat_description": "Modifying something on disk, network, memory, etc.",
-//     "threat_status": "Suggested",
-//     "controls": [],
-//     "findings": null
-// },
-// {
-//     "threat_num": 3,
-//     "threat_title": "Repudiation",
-//     "threat_description": "Claiming you didn't do something.",
-//     "threat_status": "Suggested",
-//     "controls": [],
-//     "findings": null
-// }];
-// var control_suggest = [{
-//     "control_title": "Authentication",
-//     "control_description": "Authenticate user identities.",
-//     "control_status": "Suggested",
-//     "threats": []
-// },
-// {
-//     "control_title": "Digital Signatures",
-//     "control_description": "Data validation and tamper detection.",
-//     "control_status": "Suggested",
-//     "threats": []
-// },
-// {
-//     "control_title": "Accountability",
-//     "control_description": "Track all system activities.",
-//     "control_status": "Suggested",
-//     "threats": []
-// }];
     
 
 // Create an SVG on page load
 window.onload = function() {
-    var date = new Date();
-    var displayDate = date.toLocaleDateString();
-    var displayTime = date.toLocaleTimeString();
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+    const date = new Date();
+    const displayDate = date.toLocaleDateString();
+    const displayTime = date.toLocaleTimeString();
     document.getElementById('datetime').innerHTML += displayDate + " " + displayTime;
 
     let area = d3.select('.dfd_assetview').node().getBoundingClientRect();
@@ -124,7 +98,7 @@ window.onload = function() {
 
     // Tells d3 how to handle forces
     simulation = d3.forceSimulation(nodes)
-    .force("collide", d3.forceCollide().radius(100))
+    .force("collide", d3.forceCollide(50))
     .on("tick", ticked);
 
     // Creates a definition for an arrowhead, to be used by links later
@@ -203,7 +177,7 @@ function collapse_bottom_bar() {
     simulation = d3.forceSimulation(nodes)
     // .force("x", d3.forceX(area.width / 2))
     // .force("y", d3.forceY(area.height / 2 * dfd_svg_fraction))
-    .force("collide", d3.forceCollide().radius(100))
+    .force("collide", d3.forceCollide(50))
     .on("tick", ticked);
 }
 
@@ -227,7 +201,7 @@ window.onresize = function() {
     simulation = d3.forceSimulation(nodes)
     // .force("x", d3.forceX(area.width / 2))
     // .force("y", d3.forceY(area.height / 2 * dfd_svg_fraction)) // TODO make this dynamic with bottom bar
-    .force("collide", d3.forceCollide().radius(100))
+    .force("collide", d3.forceCollide(50))
     .on("tick", ticked);
 
     simulation.alpha(1.0).restart();
@@ -274,7 +248,7 @@ function showSection(icon) {
 // Displays suggested threats and allows users to either add or ignore the 
 // suggestions
 function showSuggestedThreats() {
-    var dropdown = document.getElementById("threat_suggest_dropdown");
+    var dropdownvar = document.getElementById("threat_suggest_dropdown");
     var node_id = getDropdownValue("threat_dropdown");
     if (node_id === -1) {
         dropdown.disabled = true;
@@ -346,8 +320,8 @@ function getNodeIdFromName(name) {
 // Displays suggested controls and allows users to either add or ignore the
 // suggestions
 function showSuggestedControls() {
-    var dropdown = document.getElementById("control_suggest_dropdown");
-    var node_id = getDropdownValue("control_dropdown");
+    const dropdown = document.getElementById("control_suggest_dropdown");
+    const node_id = getDropdownValue("control_dropdown");
     if (node_id === -1) {
         dropdown.disabled = true;
         dropdown.add(new Option("Select an asset first!", -1));
@@ -360,7 +334,7 @@ function showSuggestedControls() {
     while (dropdown.options.length > 0) {
         dropdown.remove(0);
     }
-    if (nodes[node_id].controls[0].length == 0) {
+    if (nodes[node_id].controls[0].length === 0) {
         dropdown.disabled = true;
         dropdown.add(new Option("No suggested controls for this asset", -1));
     }
@@ -379,7 +353,7 @@ function showSuggestedControls() {
     dropdown.onchange = function () {
         var control_id = getDropdownValue("control_suggest_dropdown");
         var div = document.getElementById("display_suggested_control");
-        if (control_id == -1) { 
+        if (control_id === -1) {
             div.innerHTML = "";
             return; 
         }
@@ -404,18 +378,45 @@ function showSuggestedControls() {
     }
 }
 
+function storeCoordinates() {
+    // store the x,y coordinates of all nodes
+    // TODO: this is used for testing. Each node's coordinates should be stored when the node is dragged
+    nodes.forEach(node => {
+    $.ajax({
+        type: "POST",
+        url: updateNodePositionUrl, // make sure this URL is defined in your backend
+        headers: {
+            "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value,
+        },
+        data: {
+            name: node['asset_name'],
+            x: node.x,
+            y: node.y,
+            project_name: projectName,
+        },
+        dataType: "html",
+        success: function(result){
+            // Optionally handle success
+            console.debug("Coordinates for " + node['asset_name'] + " stored successfully.");
+        },
+        error: function(error) {
+            console.error("Error storing coordinates for " + node['asset_name'], error);
+        }
+    });
+    });
+}
+
 function loadDfd() {
     // for element in elements, call loadElement
     d3.json(loadDfdUrl).then(function(data) {
         // console.debug(data);
         // data.assets.forEach(function(asset){loadElement(asset.type, asset.name);});
-        data.entity.forEach(function(ent){loadElement(ent.type, ent.name);});
+        data.entity.forEach(function(ent){loadElement(ent.type, ent.name, ent.d3_node_positions__x, ent.d3_node_positions__y);});
         data.dataflow.forEach(function(df){
             // console.debug(df.source__name + getNodeIdFromName(df.source__name))
             loadDataFlow(getNodeIdFromName(df.source__name), getNodeIdFromName(df.dest__name), df.name)});
         // for each trust boundary in Boundary: 1) select all nodes 2) call createTrustBoundary();
         data.boundary.forEach(function(tb){
-            // selected = true for each node in entities
             tb.entities.forEach(function(ent) {
                 for (let node of nodes) {
                     node.selected = node.asset_name === ent;
@@ -427,8 +428,7 @@ function loadDfd() {
                 node.selected = false;
             }
         });
-        // load each threat
-        data.threats.forEach(threat => {
+        data.threats.forEach(threat => {  // load each threat
             for (let node of nodes) {
                 node.selected = threat["assets"].includes(node.asset_name);  // select nodes affected by this threat
             }
@@ -472,7 +472,6 @@ function loadDfd() {
             for (let node of nodes) {
                 node.selected = obj["assets"].includes(node.asset_name);
             }
-            console.debug(obj.comments)
             addAssumption(obj.comments);
         });
         nodes.forEach(n => {n.selected = false;})  // unselect nodes after loading DFD
@@ -481,13 +480,12 @@ function loadDfd() {
     simulation.alpha(1.0).restart();
 }
 
-function loadElement(asset_type, asset_name) {
-    // Prompt user for asset name
+function loadElement(asset_type, asset_name, x, y) {
     const area = d3.select('.dfd_assetview').node().getBoundingClientRect();
 
     // Add new node to nodes array
-    const rand_x = area.width/2 + Math.random()*5 - 10;
-    const rand_y = area.height/2 + Math.random()*5 - 10;
+    const rand_x = x === undefined ? area.width/2 + Math.random()*5 - 10 : x;
+    const rand_y = y === undefined ? area.height/2 + Math.random()*5 - 10 : y;
     nodes.push({
         "id": total_nodes,
         "asset_type": asset_type,
@@ -505,7 +503,7 @@ function loadElement(asset_type, asset_name) {
     }
 
     // Select every node and attach it to an asset
-    var node_update = container.selectAll(".node_group")
+    const node_update = container.selectAll(".node_group")
         .data(simulation.nodes(), function (d) {return d.id});
 
     // node.enter() gets every NEWLY ADDED node.
@@ -3873,7 +3871,7 @@ function clearDfd() {
 }
 
 // Add a threat to an existing DFD node.
-function addThreat(title, cve_num, description, stride_class, mitigated = false) {
+function addThreat(title, cve_num, description, stride_class, severity, mitigated = false) {
     // let asset = getDropdownValue("threat_dropdown");
     let selected_assets = nodes.filter(node => node.selected);
     const new_threat = title === undefined; // if title is undefined, we are creating a new threat
@@ -3899,6 +3897,8 @@ function addThreat(title, cve_num, description, stride_class, mitigated = false)
         description = document.getElementById("threat_description").value;
     if (stride_class === undefined)
         stride_class = document.getElementById("stride_category").value;
+    if (severity === undefined)
+        severity = document.getElementById("severity").value;
 
     // add threat to ALL selected assets
     selected_assets.forEach(node => {node.threats[mitigated ? 2 : 1].push({
@@ -3915,6 +3915,7 @@ function addThreat(title, cve_num, description, stride_class, mitigated = false)
         "threat_num": cve_num,
         "threat_title": title,
         "threat_description": description,
+        "severity": severity,
         "threat_status": "Known",
         "controls": [],
         "findings": null,
@@ -3932,7 +3933,7 @@ function addThreat(title, cve_num, description, stride_class, mitigated = false)
             assets: selected_assets.map(node => node.asset_name),
             cve_id: cve_num,
             stride_class: stride_class,
-            severity: "",  // TODO: add severity functionality
+            severity: severity,
             description: description,
             project_name: projectName,
         },
@@ -4188,21 +4189,17 @@ function displayAllAssumptions() {
     for (let assumption of assumptions) {  // make a div for each assumption
         let text = assumption.text;
         if (assumption.text.length > 20) {
-            text = assumption.text.substring(0, 17) + "...";  // truncate text to 20 characters
+            text = "\"" + assumption.text.substring(0, 28) + "...\"";  // truncate text to 20 characters
         }
         // container.innerHTML += "<div class=\"assumption_item\" onclick=\"showAssumpDetailPanel(\'" + assumption.text + "\');\">" + text + "</div>";
-        container.innerHTML += "<button class=\"add_button assumption_item popout_button\" onclick=\"showAssumpDetailPanel(\'" + assumption.text + "\');\">" + text + "</button>";
+        // container.innerHTML += "<button class=\"add_button assumption_item popout_button\" onclick=\"showAssumpDetailPanel(\'" + assumption.text + "\');\">" + text + "</button>";
+        container.innerHTML += "<div class=\"alert alert-primary popout_alert\" role=\"alert\" onclick=\"showAssumpDetailPanel(\'" + assumption.text + "\');\">" + text + "</div>";
     }
-    // TODO: might need to explicitly re-add the "Add Assumption" button here
 }
 
 function addAssumption(text) {
     const new_assumption = text === undefined;
     const selected_assets = nodes.filter(node => node.selected);
-    // if (selected_assets.length === 0) {
-    //     alert("Please select an asset to add an assumption to!");
-    //     return;
-    // }
     const assumption_text = new_assumption? document.getElementById("assumption_description").value : text;
     assumptions.push({"text": assumption_text, "assets": selected_assets.map(node => node.asset_name)});
     if (new_assumption) {

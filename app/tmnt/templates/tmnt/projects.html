@@ -28,7 +28,7 @@
                                 <a href="{% url 'edit_project' project_name=project.name %}">
                                     <img src="{% static 'edit.png' %}" width="25%" style="padding-bottom: 10px; float: right" title="Edit Project">
                                 </a>
-                            </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -37,6 +37,7 @@
             </div>
         </div>
     {% else %}
+        {# Failsafe: this shouldn't be visible #}
         <h2>Please log in to view your projects.</h2>
         <a href="{% url 'login' %}" class="btn btn-primary">Login</a>
     {% endif %}
