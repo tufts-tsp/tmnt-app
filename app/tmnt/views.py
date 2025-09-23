@@ -279,11 +279,13 @@ def add_externalasset(request):
     #     machine = Machine.CONTAINER
     # elif machine_type == "Serverless":
     #     machine = Machine.SERVERLESS
-
-    ext = ExtAsset(name=name, project=project, open_ports=open_ports_str, machine_type=machine_type)
-    ext.save()
-    ua = UserAction(username=request.user, project=project, action=f'create externalasset', entities=name, details=f'Open ports: {open_ports_str}; Machine type: {machine_type}')
-    ua.save()
+    with transaction.atomic():
+        entity = Entity(name=name, project=project, comments='', type="External Entity")
+        entity.save()
+        ext = ExtAsset(name=name, project=project, ports=open_ports_str, machine_type=machine_type, parent_entity=entity, type="External Entity")
+        ext.save()
+        ua = UserAction(username=request.user, project=project, action=f'create externalasset', entities=name, details=f'Open ports: {open_ports_str}; Machine type: {machine_type}')
+        ua.save()
     # addexternalasset_request = AddExternalAssetRequest(
     #     name=name,
     #     open_ports=open_ports,
@@ -300,11 +302,11 @@ def delete_asset(request):
     name = request.POST.get("name")
     asset_type = request.POST.get("type")
     project = get_object_or_404(Project, name=request.POST.get("project_name"), user=request.user)
-    # TODO: wrap in try-except and send non-200 response on failure
+    Entity.objects.filter(name=name, project=project).delete()  # delete the parent entity
     # below code shouldn't be necessary if foreign key on delete cascade works properly
-    if asset_type == "Process" or asset_type == "Lambda" or asset_type == "Server":
-        Entity.objects.filter(name=name, project=project).delete()
-    elif asset_type == "Actor":
+    # if asset_type == "Process" or asset_type == "Lambda" or asset_type == "Server":
+    #     Entity.objects.filter(name=name, project=project).delete()
+    if asset_type == "Actor":
         Actor.objects.filter(name=name, project=project).delete()
     elif asset_type == "Data Store":
         Datastore.objects.filter(name=name, project=project).delete()
