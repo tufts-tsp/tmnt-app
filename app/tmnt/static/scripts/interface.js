@@ -830,7 +830,7 @@ function addElement(asset_type) {
                         name: asset_name,
                         type: "ExtAsset",
                         open_port: document.getElementById("o_port").value,
-                        machine: document.getElementById("machine_type").value,
+                        machine_type: document.getElementById("machine_type").value,
                         project_name: projectName,
                     },
                     data_type: "json",
