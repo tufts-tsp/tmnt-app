@@ -648,6 +648,22 @@ function loadElement(asset_type, asset_name, x, y) {
     }
 }
 
+function validateAssetName() {
+    const asset_name = document.getElementById("newEntityNameInput").value.trim();
+
+    if (!asset_name) {
+        alert("Entity must have a name!");
+        return null;
+    }
+
+    if (nodes.map(a => a.asset_name).includes(asset_name)) {
+        alert("Another entity has the name " + asset_name + "!");
+        return null;
+    }
+
+    return asset_name;
+}
+
 // When an Asset button is clicked, this function creates a corresponding
 // node, then pushes it to the list of nodes for d3 to draw at a later step.
 function addElement(asset_type) {
@@ -661,12 +677,11 @@ function addElement(asset_type) {
         case "Actor":
             document.getElementById("actorFields").style.display = "block";  // show the Actor only fields
             document.getElementById("form_done").onclick = function () {
+                const asset_name = validateAssetName();
+                if (!asset_name) return; // stop if invalid
+
                 $('#newEntityModal').modal('hide');
-                const asset_name = document.getElementById("newEntityNameInput").value;
-                if (nodes.map(a => a.asset_name).includes(asset_name)) {
-                    alert("Another entity has the name " + asset_name + "!");
-                    return;
-                }
+        
                 $.ajax({
                     type: "POST",
                     url: addEntityUrl,
@@ -694,12 +709,11 @@ function addElement(asset_type) {
             break;
         case "Server":
             document.getElementById("form_done").onclick = function () {
-                const asset_name = document.getElementById("newEntityNameInput").value;
+                const asset_name = validateAssetName();
+                if (!asset_name) return; // stop if invalid
+
                 $('#newEntityModal').modal('hide');
-                if (nodes.map(a => a.asset_name).includes(asset_name)) {
-                    alert("Another entity has the name " + asset_name + "!");
-                    return;
-                }
+
                 $.ajax({
                     type: "POST",
                     url: addEntityUrl,
@@ -724,8 +738,11 @@ function addElement(asset_type) {
             document.getElementById("dsOnly").style.display = "block";  // show the Data Store only fields
             document.getElementById("dataStoreFields").style.display = "block";
             document.getElementById("form_done").onclick = function () {
-                const asset_name = document.getElementById("newEntityNameInput").value;
+                const asset_name = validateAssetName();
+                if (!asset_name) return; // stop if invalid
+
                 $('#newEntityModal').modal('hide');
+
                 if (nodes.map(a => a.asset_name).includes(asset_name)) {
                     alert("Another entity has the name " + asset_name + "!");
                     return;
@@ -760,8 +777,11 @@ function addElement(asset_type) {
             break;
         case "Process":
             document.getElementById("form_done").onclick = function () {
-                const asset_name = document.getElementById("newEntityNameInput").value;
+                const asset_name = validateAssetName();
+                if (!asset_name) return; // stop if invalid
+
                 $('#newEntityModal').modal('hide');
+
                 if (nodes.map(a => a.asset_name).includes(asset_name)) {
                     alert("Another entity has the name " + asset_name + "!");
                     return;
@@ -790,8 +810,11 @@ function addElement(asset_type) {
         case "External Entity":
             document.getElementById("dataStoreFields").style.display = "block";
             document.getElementById("form_done").onclick = function () {
-                const asset_name = document.getElementById("newEntityNameInput").value;
+                const asset_name = validateAssetName();
+                if (!asset_name) return; // stop if invalid
+
                 $('#newEntityModal').modal('hide');
+
                 if (nodes.map(a => a.asset_name).includes(asset_name)) {
                     alert("Another entity has the name " + asset_name + "!");
                     return;
@@ -822,8 +845,11 @@ function addElement(asset_type) {
             break;
         case "Lambda":
             document.getElementById("form_done").onclick = function () {
-                const asset_name = document.getElementById("newEntityNameInput").value;
+                const asset_name = validateAssetName();
+                if (!asset_name) return; // stop if invalid
+
                 $('#newEntityModal').modal('hide');
+
                 if (nodes.map(a => a.asset_name).includes(asset_name)) {
                     alert("Another entity has the name " + asset_name + "!");
                     return;
