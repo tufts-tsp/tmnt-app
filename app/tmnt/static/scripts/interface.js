@@ -1057,12 +1057,20 @@ function clicked(e) {
         .style("stroke", "#3E8EDE")
         .style("stroke-width", "4");
 
-    let bottom_bar_html =
-        "<ul class=\"options\" id=\"options\"><li value=\"" + selected_node.id + "\"><a href=\"#\">Options &#9662;</a><ul></ul></li></ul>" + 
-        "<h2>" + selected_node.asset_name + "</h2>" + 
-        selected_node.asset_type +
-        "<br><br>" +
-        "<h3>Threats</h3>";
+        let bottom_bar_html = `
+        <div class="options-wrapper">
+          <ul class="options" id="options">
+            <li value="${selected_node.id}">
+              <a href="#">Options &#9662;</a>
+              <ul></ul>
+            </li>
+          </ul>
+        </div>
+        <h2>${selected_node.asset_name}</h2>
+        ${selected_node.asset_type}
+        <br><br>
+        <h3>Threats</h3>
+      `;
 
     if (selected_node.threats[0].length > 0) {
         bottom_bar_html += "<div class=\"display\"><button class=\"displaybtn\" style=\"background-color:#808080\">Suggested</button><div class=\"display-content\" style=\"z-index:10\">";
@@ -1751,6 +1759,61 @@ function resetBottomBar() {
     updateBoundaryDropdown();
 }
 
+function setupOptionsMenuToggles() {
+    const optionsMenu = document.getElementById("options");
+  
+    optionsMenu.querySelectorAll("li").forEach((li) => {
+        const submenu = li.querySelector("ul");
+        const link = li.querySelector("a");
+    
+        if (submenu && link) {
+            link.addEventListener("click", (e) => {
+                e.preventDefault();
+        
+                // Close other submenus
+                const siblings = [...li.parentNode.children].filter((el) => el !== li);
+                siblings.forEach((sib) => sib.classList.remove("open"));
+        
+                // Toggle this submenu
+                li.classList.toggle("open");
+            });
+        }
+    });
+}
+  
+// close all menus when clicking outside
+document.addEventListener("click", (e) => {
+    const optionsMenu = document.getElementById("options");
+    if (!optionsMenu.contains(e.target) && e.target.id !== "options-button") {
+        optionsMenu.querySelectorAll(".open").forEach((li) => li.classList.remove("open"));
+    }
+});
+  
+// close everything if Options button clicked again
+function closeAllMenus() {
+    document.querySelectorAll("#options .open").forEach((el) =>
+        el.classList.remove("open")
+    );
+}
+
+function createMenuItem(text, onClick, id = null, extraChild = null) {
+    const li = document.createElement("li");
+    if (id) li.id = id;
+  
+    const a = document.createElement("a");
+    a.href = "#";
+    a.textContent = text;
+    if (onClick) a.onclick = onClick;
+  
+    li.appendChild(a);
+  
+    if (extraChild) {
+        li.appendChild(extraChild); 
+    }
+  
+    return li;
+}
+
 // Create the options dropdown button when viewing an asset
 function createAssetOptions() {
     var assetID = document.getElementById("options").children[0].value;
@@ -1758,82 +1821,78 @@ function createAssetOptions() {
     var currNode = nodes[nodeIndex(assetID)];
 
     // creating the button to add new dataflows to the current asset
-    var listItem = document.createElement('li');
-    listItem.id = "add_dataflow";
-    var new_dataflow = document.createElement('a');
-    new_dataflow.href = "#";
-    new_dataflow.innerHTML = "Create dataflow to...";
-    new_dataflow.onclick = function () {
-        if (nodes.length < 2) {
-            alert("Add more assets first!")
-        }
-    }
-    listItem.appendChild(new_dataflow);
-    listItem.appendChild(newDataflowList(assetID));
-    options.appendChild(listItem);
+    options.appendChild(
+        createMenuItem(
+            "Create dataflow to...",
+            () => {
+                if (nodes.length < 2) {
+                    alert("Add more assets first!");
+                }
+            },
+            "add_dataflow",
+            newDataflowList(assetID)
+        )
+    );
 
     // creating the button to view workflows connected to current asset
-    listItem = document.createElement('li');
-    listItem.id = "view_dataflows";
-    var view_dataflows = document.createElement('a');
-    view_dataflows.href = "#";
-    view_dataflows.innerHTML = "View dataflow...";
-    view_dataflows.onclick = function() {
-        var has_dataflows = false;
-        for (let dataflow of links) {
-            if (dataflow.source === currNode || dataflow.target === currNode) {
-                has_dataflows = true;
-            }
-        }
-        if (!has_dataflows) {
-            alert("There are no dataflows with this asset!");
-        }
-    }
-    listItem.appendChild(view_dataflows);
-    listItem.appendChild(createDataflowList(currNode));
-    options.appendChild(listItem);
+    options.appendChild(
+        createMenuItem(
+            "View dataflow...", 
+            () => {
+                var has_dataflows = false;
+                for (let dataflow of links) {
+                    if (dataflow.source === currNode || dataflow.target === currNode) {
+                        has_dataflows = true;
+                    }
+                }
+                if (!has_dataflows) {
+                    alert("There are no dataflows with this asset!");
+                }
+            }, 
+            "view_dataflows",
+            createDataflowList(currNode)
+        )
+    );
 
     // creating the button to view workflows connected to current asset
-    listItem = document.createElement('li');
-    listItem.id = "view_workflow";
-    var view_workflow = document.createElement('a');
-    view_workflow.href = "#";
-    view_workflow.innerHTML = "View workflow...";
-    view_workflow.onclick = function() {
-        var has_workflows = false;
-        for (let components of Object.values(workflows)) {
-            if (components.includes(currNode)) {
-                has_workflows = true;
-            }
-        }
-        if (!has_workflows) {
-            alert("There are no workflows with this asset!");
-        }
-    }
-    listItem.appendChild(view_workflow);
-    listItem.appendChild(createWorkflowList(currNode));
-    options.appendChild(listItem);
+    options.appendChild(
+        createMenuItem(
+            "View workflow...", 
+            () => {
+                var has_workflows = false;
+                for (let components of Object.values(workflows)) {
+                    if (components.includes(currNode)) {
+                        has_workflows = true;
+                    }
+                }
+                if (!has_workflows) {
+                    alert("There are no workflows with this asset!");
+                }
+            }, 
+            "view_workflow",
+            createWorkflowList(currNode)
+        )
+    );
 
     // creating the button to view trust boundaries with current asset
-    listItem = document.createElement('li');
-    listItem.id = "view_boundary";
-    var view_boundary = document.createElement('a');
-    view_boundary.href = "#";
-    view_boundary.innerHTML = "View trust boundary...";
-    view_boundary.onclick = function() {
-        let has_boundaries = false;
-        for (let assets of Object.values(boundaries)) {
-            if (assets.includes(currNode)) {
-                has_boundaries = true;
-            }
-        }
-        if (!has_boundaries) {
-            alert("There are no trust boundaries with this asset!");
-        }
-    }
-    listItem.appendChild(view_boundary);
-    listItem.appendChild(createBoundaryList(currNode));
-    options.appendChild(listItem);
+    options.appendChild(
+        createMenuItem(
+            "View trust boundary...", 
+            () => {
+                let has_boundaries = false;
+                for (let assets of Object.values(boundaries)) {
+                    if (assets.includes(currNode)) {
+                        has_boundaries = true;
+                    }
+                }
+                if (!has_boundaries) {
+                    alert("There are no trust boundaries with this asset!");
+                }
+            }, 
+            "view_boundary",
+            createBoundaryList(currNode)
+        )
+    );
 
     // creating nested delete dropdown menu
     listItem = document.createElement('li');
@@ -2245,6 +2304,8 @@ function createAssetOptions() {
     delete_list.appendChild(asset_li);
     listItem.appendChild(delete_list);
     options.appendChild(listItem);
+
+    setupOptionsMenuToggles();
 }
 
 // Helper function to create/update list of possible new dataflows in   
