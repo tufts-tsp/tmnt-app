@@ -988,6 +988,35 @@ function dragged(e) {
     e.subject.x = e.x;
     e.subject.y = e.y;
     simulation.alpha(1.0).restart();
+    // send coordinates to DB
+      let node = e.subject;
+      console.debug("Storing coordinates for : "+ node['asset_name']);
+      if (node !== undefined) {
+          $.ajax({
+              type: "POST",
+              url: updateNodePositionUrl, // make sure this URL is defined in your backend
+              headers: {
+                  "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value,
+              },
+              data: {
+                  name: node['asset_name'],
+                  x: node.x,
+                  y: node.y,
+                  project_name: projectName,
+              },
+              dataType: "html",
+              success: function (result) {
+                  // Optionally handle success
+                  console.debug("Coordinates for " + node['asset_name'] + " stored successfully.");
+              },
+              error: function (error) {
+                  console.error("Error storing coordinates for " + node['asset_name'], error);
+              }
+          });
+      }
+      else {
+          console.error("Error storing coordinates: node is undefined");
+      }
 }
 
 // Function that defines how node groups should behave when clicked.
@@ -2135,11 +2164,11 @@ function createAssetOptions() {
             }
         }
 
-        if (!editBoundaries.length === 0 && !confirm("This will delete " + currNode.asset_name + " from the following trust boundaries: " + editBoundaries.toString() + "\nContinue?")) {
+        if (editBoundaries.length !== 0 && !confirm("This will delete " + currNode.asset_name + " from the following trust boundaries: " + editBoundaries.toString() + "\nContinue?")) {
             return;
         }
 
-        if (!delBoundaries.length === 0 && !confirm("Since trust boundaries must be connected, this will delete the following boundaries: " + delBoundaries.toString() + "\nContinue?")) {
+        if (delBoundaries.length !== 0 && !confirm("Since trust boundaries must be connected, this will delete the following boundaries: " + delBoundaries.toString() + "\nContinue?")) {
             return;
         }
 
@@ -2159,9 +2188,9 @@ function createAssetOptions() {
         for (let bound of editBoundaries) {
             let assets = boundaries[bound];
             assets.splice(assets.indexOf(currNode), 1);
-            svg.selectAll(".link_group").filter(d => (d.source == currNode && !assets.includes(d.target)) || (d.target == currNode && !assets.includes(d.source))).selectAll(".boundary").filter(function() { return d3.select(this).attr("boundaryName") == bound; }).remove();
+            svg.selectAll(".link_group").filter(d => (d.source === currNode && !assets.includes(d.target)) || (d.target === currNode && !assets.includes(d.source))).selectAll(".boundary").filter(function() { return d3.select(this).attr("boundaryName") == bound; }).remove();
 
-            var flow = d3.selectAll(".link_group").filter(d => (d.source == currNode && assets.includes(d.target)) || (d.target == currNode && assets.includes(d.source)));
+            var flow = d3.selectAll(".link_group").filter(d => (d.source === currNode && assets.includes(d.target)) || (d.target === currNode && assets.includes(d.source)));
             var jitter; 
             if (d3.selectAll(".boundary").filter(function() {return d3.select(this).attr("boundaryName") === bound;}).empty()) {
                 jitter = (Math.random() * 0.3) + 0.1;
@@ -2326,7 +2355,7 @@ function viewDataflow(dataflow) {
         // Removes all workflows that involve this dataflow
         for (let key of Object.keys(workflows)) {
             var components = workflows[key];
-            if (components.includes(dataflow.source) && components.indexOf(dataflow.source) == components.indexOf(dataflow.target) - 1) {
+            if (components.includes(dataflow.source) && components.indexOf(dataflow.source) === components.indexOf(dataflow.target) - 1) {
                 delete workflows[key];
             }
         }
