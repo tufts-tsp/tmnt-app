@@ -15,4 +15,5 @@ RUN python manage.py migrate
 
 ENTRYPOINT ["python", "manage.py"]
 CMD ["runserver", "0.0.0.0:8086"]
+# only for gunicorn below
 #CMD ["gunicorn", "--bind", "0.0.0.0:8086", "tmnt.wsgi:application"]
