@@ -24,10 +24,3 @@ jobs:
           file: app/Dockerfile
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/tmnt_ui:latest
-      - name: Build and push Controller
-        uses: docker/build-push-action@v5
-        with:
-          context: controller/
-          file: controller/Dockerfile
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/tmnt_controller:latest
