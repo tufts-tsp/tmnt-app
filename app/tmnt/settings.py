@@ -27,7 +27,7 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY",
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', '') != 'False'
 
-ALLOWED_HOSTS = ["tmnt.cs.tufts.edu", "0.0.0.0", "localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ["vm-projectweb3.eecs.tufts.edu", "tmnt.cs.tufts.edu", "0.0.0.0", "localhost", "127.0.0.1"]
 
 
 # Application definition
