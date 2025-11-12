@@ -127,3 +127,5 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 LOGIN_REDIRECT_URL = "view_projects"
 LOGOUT_REDIRECT_URL = "login"
+
+CSRF_TRUSTED_ORIGINS = ["https://tmnt.cs.tufts.edu"]

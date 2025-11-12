@@ -7,6 +7,7 @@ from .views import SignUpView
 urlpatterns = [
     path("tmnt/<str:project_name>", views.workspace, name="workspace"),
     path("tmnt/", views.project_list, name="tmnt_default"),
+    path("/", views.project_list, name="project_list_default"),
     # path("api/add_actor", views.add_actor, name="api/add_actor"),
     # path("api/add_server", views.add_server, name="api/add_server"),
     # path("api/add_process", views.add_process, name="api/add_process"),
