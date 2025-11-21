@@ -79,9 +79,12 @@ WSGI_APPLICATION = "tmnt.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
-        "OPTIONS": {
-            "read_default_file": "/path/to/my.cnf",
-        },
+        "NAME": os.environ.get("DB_TITLE", ""),
+        'USER': os.environ.get("DB_USER", ""),
+        'PASSWORD': os.environ.get("DB_PASSWORD", ""),
+        # "OPTIONS": {
+        #     "read_default_file": "/path/to/my.cnf",
+        # },
     }
 }
 
