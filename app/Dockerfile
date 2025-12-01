@@ -2,8 +2,8 @@ FROM python:3.11
 
 ARG DB_HOST
 ARG DB_PASSWORD
-ENV DB_HOST=$DB_HOST
-ENV DB_PASSWORD=$DB_PASSWORD
+ENV DB_HOST=${DB_HOST}
+ENV DB_PASSWORD=${DB_PASSWORD}
 
 RUN mkdir /service
 #COPY protobufs/ /service/protobufs/
