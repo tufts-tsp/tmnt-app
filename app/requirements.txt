@@ -10,4 +10,4 @@ typing_extensions==4.8.0
 grpcio-tools~=1.30
 gunicorn>=21.0.0
 mysql-connector-python >=9.5.0
-mysqlclient ==2.2.7
+mysqlclient>=2.2.7
