@@ -10,6 +10,8 @@ RUN python -m pip install -r requirements.txt
 #    --grpc_python_out=. /service/protobufs/controller.proto
 
 EXPOSE 8086
+ENV DB_HOST=${DB_HOST}
+ENV DB_PASSWORD=${DB_PASSWORD}
 
 #RUN python manage.py makemigrations
 #RUN python manage.py migrate
