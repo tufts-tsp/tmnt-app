@@ -1,5 +1,10 @@
 FROM python:3.11
 
+ARG DB_HOST
+ARG DB_PASSWORD
+ENV DB_HOST=$DB_HOST
+ENV DB_PASSWORD=$DB_PASSWORD
+
 RUN mkdir /service
 #COPY protobufs/ /service/protobufs/
 COPY . /service/app/
@@ -15,8 +20,6 @@ EXPOSE 8086
 #RUN python manage.py migrate
 
 #ENTRYPOINT ["python", "manage.py"]
-ENTRYPOINT export DB_HOST=${DB_HOST} && \
-              export DB_PASSWORD=${DB_PASSWORD}
 #CMD ["runserver", "0.0.0.0:8086"]
 # only for gunicorn below!
 CMD ["gunicorn", "--bind", "0.0.0.0:8086", "tmnt.wsgi:application"]
