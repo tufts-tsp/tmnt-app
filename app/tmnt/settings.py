@@ -82,6 +82,7 @@ DATABASES = {
         "NAME": os.environ.get("DB_TITLE", "tmnt"),
         'USER': os.environ.get("DB_USER", ""),
         'PASSWORD': os.environ.get("DB_PASSWORD", ""),
+        'HOST': os.environ.get("DB_HOST", ""),
         # "OPTIONS": {
         #     "read_default_file": "/path/to/my.cnf",
         # },

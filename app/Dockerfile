@@ -1,4 +1,4 @@
-FROM python:3.11
+FROM python:3.11-slim
 
 RUN mkdir /service
 #COPY protobufs/ /service/protobufs/
@@ -14,7 +14,7 @@ EXPOSE 8086
 #RUN python manage.py makemigrations
 #RUN python manage.py migrate
 
-ENTRYPOINT ["python", "manage.py"]
-CMD ["runserver", "0.0.0.0:8086"]
+#ENTRYPOINT ["python", "manage.py"]
+#CMD ["runserver", "0.0.0.0:8086"]
 # only for gunicorn below!
-#CMD ["gunicorn", "--bind", "0.0.0.0:8086", "tmnt.wsgi:application"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8086", "tmnt.wsgi:application"]
