@@ -80,9 +80,9 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
         "NAME": os.environ.get("DB_TITLE", "tmnt"),
-        'USER': os.environ.get("DB_USER", ""),
+        'USER': os.environ.get("DB_USER", "tmnt"),
         'PASSWORD': os.environ.get("DB_PASSWORD", ""),
-        'HOST': os.environ.get("DB_HOST", ""),
+        'HOST': os.environ.get("DB_HOST", "mysql-user"),
         # "OPTIONS": {
         #     "read_default_file": "/path/to/my.cnf",
         # },
