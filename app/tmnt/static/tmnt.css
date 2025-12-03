@@ -357,3 +357,54 @@ th, td {
 #greyed_out {
     color: grey;
 }
+
+#messageModal .modal-content {
+    background-color: #fef9e7;
+    border: 2px solid #f4d03f;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    color: #333;
+}
+  
+#messageModal .modal-header {
+    background-color: #f9e79f;
+    border-bottom: none;
+}
+  
+#messageModal .modal-footer {
+    border-top: none;
+    background-color: #fdf3c7;
+}
+  
+#messageModal .btn-primary {
+    background-color: #3e8ede;
+    border-color: #3e8ede;
+}
+
+#newEntityModal .modal-content {
+    background-color: #ffffff;
+    border: 1px solid #ccc;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}
+  
+#newEntityModal .modal-header {
+    background-color: #3e8ede;
+    color: white;
+}
+  
+#newEntityModal .modal-footer {
+    background-color: #f7f7f7;
+}
+
+#messageModal {
+    z-index: 1100; 
+}
+
+#messageModal {
+    z-index: 2000 !important;
+}
+
+.modal-backdrop.message-modal-backdrop {
+    z-index: 1990 !important;
+}
