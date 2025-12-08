@@ -147,6 +147,7 @@ window.onload = function() {
             }
             d3.selectAll(".asset").style("stroke", "black").style("stroke-width", "1");
             d3.selectAll(".link").style("stroke", "black").style("stroke-width", "1").attr("marker-end", "url(#arrow)");
+            d3.selectAll(".dataflow_name").style("stroke", null).style("stroke-width", null);
             resetBottomBar();
         }
     });
@@ -2465,10 +2466,8 @@ function viewDataflow(dataflow) {
         .style("stroke", "#3E8EDE")
         .attr("marker-end", "url(#arrow-highlight)");
 
-    var dataflow_name = dataflow.name;
-    if (dataflow.name == "") {
-        dataflow_name = "[Unnamed]";
-    }
+    const dataflow_name = dataflow.name === "" ? "[Unnamed]" : dataflow.name;
+
     // Updates bottom bar to display dataflow information
     let bottom_bar_html = "<h2>"+ dataflow_name +"</h2> <h3 style=\"font-weight:normal\">";
     bottom_bar_html += "<span style=\"cursor: pointer\" id=\"source\">" + dataflow.source.asset_name + "</span> &#8594 <span style=\"cursor: pointer\" id=\"target\">" + dataflow.target.asset_name + "</span></h3>";
@@ -2479,8 +2478,51 @@ function viewDataflow(dataflow) {
     bottom_bar_html += "<br> <button type=\"button\" class=\"view_button\" id=\"unselect_button\">Unselect Dataflow</button>";
     bottom_bar_html += "<br> <button type=\"button\" class=\"view_button\" id=\"remove_dataflow\">Remove Dataflow</button>";
     document.getElementById("bottom_bar").innerHTML = bottom_bar_html;
-    document.getElementById("edit_button").onclick = function () {
-        dataflow.name = window.prompt("Rename this dataflow to:", dataflow.name);
+    document.getElementById("edit_button").onclick = async function () {
+        const old_name = dataflow.name;
+        dataflow.name = await showPrompt("Rename this dataflow to:", dataflow.name);
+        // implement cancel button in showPrompt OR check for no change
+        if (dataflow.name === null || dataflow.name === old_name) {
+            dataflow.name = old_name;
+            return;
+        }
+        // redraw title
+        container.selectAll(".link_group")
+          .filter(d => d.source === dataflow.source && d.target === dataflow.target)
+          .each(function(d) {
+            const lg = d3.select(this);
+            // try to find an existing text label inside the link_group
+            let label = lg.select("text");
+            if (!label.empty()) {
+              label.text(dataflow.name || "");
+            } else {
+              // append a centered text element; ticked() will position it
+              lg.append("text")
+                .attr("class", "dataflow_label")
+                .attr("text-anchor", "middle")
+                .attr("alignment-baseline", "central")
+                .text(dataflow.name || "");
+            }
+          });
+        $.ajax({  // update model
+            type: "POST",
+            url: renameDataFlowUrl,
+            headers: {
+                "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+            data: {
+                old_name: old_name,
+                new_name: dataflow.name,
+                source: dataflow.source.asset_name,
+                dest: dataflow.target.asset_name,
+                project_name: projectName,
+            },
+            data_type: "html",
+            success: function(result){
+                // if (result !== 200) {showAlert("Error deleting control. Received: " + result);}
+            },
+            error: function(result){showAlert("Renaming dataflow failed with message: " + result);}
+        });
         viewDataflow(dataflow);
     };
     var unselect_button = document.getElementById("unselect_button");
@@ -2507,6 +2549,24 @@ function viewDataflow(dataflow) {
         links.splice(links.indexOf(dataflow), 1);
         var link_update = svg.selectAll(".link_group").data(links, function(d) { return d.source.id + "-" + d.target.id; });
         link_update.exit().remove();
+        $.ajax({  // update model
+            type: "POST",
+            url: deleteAssetUrl,
+            headers: {
+                "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+            data: {
+                name: dataflow.name,
+                source: dataflow.source.asset_name,
+                dest: dataflow.target.asset_name,
+                type: "Dataflow",
+                project_name: projectName,
+            },
+            data_type: "html",
+            success: function(result){
+                if (result !== 200) {showAlert("Error deleting control. Received: " + result);}
+            },
+        });
 
         // Reset all links to default
         d3.selectAll(".link")
@@ -2970,15 +3030,16 @@ function loadDataFlow(source, target, name) {
 }
 
 // Adds a dataflow line between two chosen elements.
-function addDataFlow() {
+async function addDataFlow() {
     // Get the currently selected assets to draw a dataflow between.
-    let source = getDropdownValue("source_dropdown");
-    let target = getDropdownValue("target_dropdown");
+    const source = getDropdownValue("source_dropdown");
+    const target = getDropdownValue("target_dropdown");
     let double_headed = false
 
     // Check that user actually has two assets selected:
     if (source === -1 || target === -1) {
         showAlert("Please select two assets to create a dataflow between!");
+        // TODO: highlight the dropdowns in red or something
         return;
     }
 
@@ -2986,6 +3047,7 @@ function addDataFlow() {
     // from an object to itself
     if (source === target) {
         showAlert("Cannot add a dataflow with identical source and target!");
+        // TODO: highlight the dropdowns in red or something
         return;
     }
 
@@ -3001,7 +3063,8 @@ function addDataFlow() {
     }
 
     // Prompt user for dataflow name...
-    var dataflow_name = window.prompt("(Optional) Name this dataflow:", "");
+    // var dataflow_name = window.prompt("(Optional) Name this dataflow:", "");
+    const dataflow_name = await showPrompt("(Optional) Name this dataflow:", "");
     // Return from function if user cancels
     if (dataflow_name === null || dataflow_name === false)
         return;
@@ -3039,19 +3102,20 @@ function addDataFlow() {
     });
 
     if (nodes[source].asset_type === "Actor" || nodes[target].asset_type === "Actor") {
-        link.protocol = window.prompt("What is the protocol?", "Not Specified");
+        // link.protocol = window.prompt("What is the protocol?", "Not Specified");
+        link.protocol = await showPrompt("What is the protocol?", "Not Specified");
     }
 
     // ...and append it to our array of links
     links.push(link);
 
     // Then, get a selection containing the changes to links from this step
-    var link_update = container.selectAll(".link").data(links,
+    const link_update = container.selectAll(".link").data(links,
     function(d) { return d.source.id + "-" + d.target.id; });
 
     // Use that selection to get the newly added link,
     // and create a group to add the link
-    var link_group = link_update.enter()
+    const link_group = link_update.enter()
     .append("g")
     .attr("class", "link_group")
 
@@ -3843,7 +3907,7 @@ function canCreateTrustBoundary(assets) {
 }
 
 // Adds a trust boundary containing the chosen elements
-function createTrustBoundary() {
+async function createTrustBoundary() {
     // Retrieve selected nodes
     var assets = [];
     let asset_names = [];
@@ -3860,10 +3924,10 @@ function createTrustBoundary() {
     }
 
     // Prompt user for trust boundary name...
-    var boundary_name = window.prompt("(Optional) Name this trust boundary:", "");
+    var boundary_name = await showPrompt("(Optional) Name this trust boundary:", "");
     // Prevent duplicate names
     while (Object.keys(boundaries).includes(boundary_name)) {
-        boundary_name = window.prompt(boundary_name + " already exists. Choose a different name:", "");
+        boundary_name = await showPrompt(boundary_name + " already exists. Choose a different name:", "");
     }
 
     // Return from function if user cancels

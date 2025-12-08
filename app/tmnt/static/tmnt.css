@@ -297,10 +297,12 @@ ul {
 }
 .popout_alert {
     border: 2px solid #333;
+    cursor: pointer;
     transition: box-shadow 0.2s, transform 0.2s;
 }
 .popout_alert:hover {
     box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    cursor: pointer;
     transform: scale(1.08);
 }
 

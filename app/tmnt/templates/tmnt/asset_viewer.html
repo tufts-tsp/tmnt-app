@@ -12,13 +12,13 @@
 <div class="lowerArea">
     <!-- Left sidebar to switch between modes -->
     <div class="modeBar">
-        <img src="{% static 'assets.png' %}" width="75%" style="padding-bottom: 10px;" onclick= "showSection('assets')" title="Data Flow Diagram" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Data Flow Diagram">
-        <img src="{% static 'warnings.png' %}" width="75%" style="padding-bottom: 10px;" onclick="showSection('threats')" title="Threats" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Threats">
-        <img src="{% static 'wrench.png' %}" width="75%" style="padding-bottom: 10px;"  onclick="showSection('controls')" title="Controls" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Controls">
-        <img src="{% static 'magnify.png' %}" width="75%" style="padding-bottom: 10px;" onclick="showSection('findings')" title="Findings" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Findings">
+        <img src="{% static 'assets.png' %}" width="75%" style="padding-bottom: 10px; cursor: pointer;" onclick= "showSection('assets')" title="Data Flow Diagram" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Data Flow Diagram">
+        <img src="{% static 'warnings.png' %}" width="75%" style="padding-bottom: 10px; cursor: pointer;" onclick="showSection('threats')" title="Threats" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Threats">
+        <img src="{% static 'wrench.png' %}" width="75%" style="padding-bottom: 10px; cursor: pointer;"  onclick="showSection('controls')" title="Controls" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Controls">
+        <img src="{% static 'magnify.png' %}" width="75%" style="padding-bottom: 10px; cursor: pointer;" onclick="showSection('findings')" title="Findings" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Findings">
 {#        insert a horizontal break #}
         <hr>
-        <img src="{% static 'thought-cloud.svg' %}" width="75%" style="padding-bottom: 10px;" onclick="showSection('assumptions')" title="Assumptions" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Assumptions">
+        <img src="{% static 'thought-cloud.svg' %}" width="75%" style="padding-bottom: 10px; cursor: pointer;" onclick="showSection('assumptions')" title="Assumptions" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Assumptions">
 
     </div>
 
@@ -334,6 +334,8 @@
     // Generating URLs for AJAX POST calls
     const addEntityUrl = "{%  url 'api/add_entity' %}"
     const addExternalAssetUrl = "{% url 'api/add_externalasset' %}";
+    const renameEntityUrl = "{% url 'api/rename_entity' %}";
+    const renameDataFlowUrl = "{% url 'api/rename_dataflow' %}";
     const editBoundaryUrl = "{% url 'api/edit_boundary' %}";
     const deleteAssetUrl = "{% url 'api/delete_asset' %}";
     const deleteAllAssetsUrl = "{%  url 'api/delete_all_assets' %}";

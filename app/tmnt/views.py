@@ -297,6 +297,56 @@ def add_externalasset(request):
 
     return JsonResponse(200, safe=False)
 
+def rename_dataflow(request):
+    old_name = request.POST.get("old_name")
+    new_name = request.POST.get("new_name")
+    source = request.POST.get("source")
+    dest = request.POST.get("dest")
+    project = get_object_or_404(Project, name=request.POST.get("project_name"), user=request.user)
+    with transaction.atomic():
+        DataFlow.objects.filter(source__name=source, dest__name=dest, project=project).update(name=new_name)
+        ua = UserAction(username=request.user, project=project, action=f"rename dataflow {old_name} -> {new_name}",
+                        entities=new_name)
+        ua.save()
+    return JsonResponse({"status": "ok"}, status=200)
+
+def rename_entity(request):
+    old_name = request.POST.get("old_name")
+    new_name = request.POST.get("new_name")
+    project = get_object_or_404(Project, name=request.POST.get("project_name"), user=request.user)
+    if not old_name or not new_name:
+        return JsonResponse({"error": "missing old_name or new_name"}, status=400)
+
+    try:
+        entity = Entity.objects.get(name=old_name, project=project)
+    except Entity.DoesNotExist:
+        return JsonResponse({"error": "entity not found"}, status=404)
+
+    # Prevent name collisions
+    if Entity.objects.filter(name=new_name, project=project).exclude(id=entity.id).exists():
+        return JsonResponse({"error": "an entity with the new name already exists"}, status=409)
+
+    with transaction.atomic():
+        # Rename the canonical Entity
+        entity.name = new_name
+        entity.save()
+
+        # Update models that duplicate the entity name in their own 'name' field and reference the entity
+        Actor.objects.filter(parent_entity=entity, project=project).update(name=new_name)
+        ExtAsset.objects.filter(parent_entity=entity, project=project).update(name=new_name)
+        Datastore.objects.filter(parent_entity=entity, project=project).update(name=new_name)
+
+        # Update TrustBoundary.actor_name if it stores the actor name as a string
+        TrustBoundary.objects.filter(project=project, actor_name=old_name).update(actor_name=new_name)
+
+        # Log this change as a new UserAction
+        ua = UserAction(username=request.user, project=project, action=f"rename entity {old_name} -> {new_name}",
+                        entities=new_name)
+        ua.save()
+
+    return JsonResponse({"status": "ok"}, status=200)
+
+
 def delete_asset(request):
     response_code = 200
     name = request.POST.get("name")
@@ -313,7 +363,10 @@ def delete_asset(request):
     elif asset_type == "External Entity": # external asset
         ExtAsset.objects.filter(name=name, project=project).delete()
     elif asset_type == "Dataflow":
-        DataFlow.objects.filter(name=name, project=project).delete()
+        source = request.POST.get("source")
+        dest = request.POST.get("dest")
+        print("Deleting dataflow:", name, "source:", source, "dest:", dest)
+        DataFlow.objects.filter(name=name, source__name=source, dest__name=dest, project=project).delete()
     elif asset_type == "Boundary":
         TrustBoundary.objects.filter(name=name, project=project).delete()
     elif asset_type == "Threat":
@@ -560,10 +613,10 @@ def load_dfd(request, project_name):
     entities_with_coords = Entity.objects.filter(project=project).select_related(None).values(
         'name', 'type','d3_node_positions__x', 'd3_node_positions__y'
     )
-    # TODO: this should get the x,y positions of each entity from D3NodePosition model, if corresponding entries exist
+    # this should get the x,y positions of each entity from D3NodePosition model, if corresponding entries exist
     data = {'entity': list(entities_with_coords),
             'boundary': boundary,
-            'dataflow': list(DataFlow.objects.filter(project=project).values('source__name', 'dest__name')),
+            'dataflow': list(DataFlow.objects.filter(project=project).values('source__name', 'dest__name', 'name')),
             'threats': threats,
             'controls': controls,
             'mitigated_threats': list(MitigatedThreat.objects.filter(project=project).values('asset__name', 'threat__name', 'control__name')),
