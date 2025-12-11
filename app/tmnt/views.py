@@ -400,8 +400,8 @@ def add_entity_dataflow(request, project: Project) -> int:
     source_name = request.POST.get("source")
     dest_name = request.POST.get("target")
     name = request.POST.get("name")
-    source = Entity.objects.get(name=source_name)
-    dest = Entity.objects.get(name=dest_name)
+    source = Entity.objects.get(name=source_name, project=project)
+    dest = Entity.objects.get(name=dest_name, project=project)
     with transaction.atomic():
         df = DataFlow(source=source, dest=dest, name=name, project=project)
         df.save()
