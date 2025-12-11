@@ -84,6 +84,9 @@ window.onload = function() {
     const displayDate = date.toLocaleDateString();
     const displayTime = date.toLocaleTimeString();
     document.getElementById('datetime').innerHTML += displayDate + " " + displayTime;
+    if (experimentMode) { // disable these features when in experiment mode
+        document.querySelectorAll(".experiment_disabled").forEach(elem => {elem.disabled = true;});
+    }
 
     let area = d3.select('.dfd_assetview').node().getBoundingClientRect();
 
@@ -2162,7 +2165,8 @@ function createAssetOptions() {
     delete_list.appendChild(control_li);
 
     // creating button for deleting dataflows
-    const flow_li = document.createElement('li');
+    if (!experimentMode) {
+        const flow_li = document.createElement('li');
     var remove_flow = document.createElement('a');
     remove_flow.href = "#";
     remove_flow.innerHTML = "Dataflow...";
@@ -2238,7 +2242,7 @@ function createAssetOptions() {
 
             let options = document.getElementById("options")
             options.style.display = "block";
-            bar.removeChild(bar.children[0]);                   
+            bar.removeChild(bar.children[0]);
         }
         new_ul.appendChild(document.createElement("br"));
         new_ul.appendChild(submit);
@@ -2247,9 +2251,11 @@ function createAssetOptions() {
     }
     flow_li.appendChild(remove_flow);
     delete_list.appendChild(flow_li);
+    }
 
     // creating button to delete current asset
-    var asset_li = document.createElement('li');
+    if (!experimentMode) {
+        var asset_li = document.createElement('li');
     var del = document.createElement('a');
     del.href = "#";
     del.innerHTML = "Asset";
@@ -2326,14 +2332,14 @@ function createAssetOptions() {
             // let components = workflows[flow];
             delete workflows[flow];
         }
-        
+
         for (let bound of editBoundaries) {
             let assets = boundaries[bound];
             assets.splice(assets.indexOf(currNode), 1);
             svg.selectAll(".link_group").filter(d => (d.source === currNode && !assets.includes(d.target)) || (d.target === currNode && !assets.includes(d.source))).selectAll(".boundary").filter(function() { return d3.select(this).attr("boundaryName") == bound; }).remove();
 
             var flow = d3.selectAll(".link_group").filter(d => (d.source === currNode && assets.includes(d.target)) || (d.target === currNode && assets.includes(d.source)));
-            var jitter; 
+            var jitter;
             if (d3.selectAll(".boundary").filter(function() {return d3.select(this).attr("boundaryName") === bound;}).empty()) {
                 jitter = (Math.random() * 0.3) + 0.1;
             }
@@ -2344,7 +2350,7 @@ function createAssetOptions() {
             }
             appendTrustPath(flow, bound, jitter);
         }
-        
+
         for (let bound of delBoundaries) {
             deleteBoundary(bound);
         }
@@ -2389,6 +2395,7 @@ function createAssetOptions() {
     }
     asset_li.appendChild(del);
     delete_list.appendChild(asset_li);
+    }
     listItem.appendChild(delete_list);
     options.appendChild(listItem);
 
@@ -2727,6 +2734,9 @@ function updateAssetDropdowns() {
             ))
         }
     });
+    if (experimentMode) {
+        document.querySelectorAll(".experiment_disabled").forEach(elem => elem.disabled = true);
+    }
 }
 
 // Clears the threat dropdown lists, then regenerates them
@@ -2889,8 +2899,8 @@ function updateFindings() {
     // any previously saved values and show them back to the user
     findings = nodes[node_id].threats[selected_threat].findings;
     if (findings != null) {
-        assessor = document.getElementById("assessor_textbox");
-        assessment_date = document.getElementById("datetime");
+        const assessor = document.getElementById("assessor_textbox");
+        const assessment_date = document.getElementById("datetime");
         let date = findings.assessment_date;
         let displayDate = date.toLocaleDateString();
         let displayTime = date.toLocaleTimeString();
@@ -2910,9 +2920,9 @@ function updateFindings() {
         document.querySelector("input[name=\"radio_nonrepudiation\"][value=\"" + findings.technical_impact.nonrepudiation + "\"]").checked = true;
         document.querySelector("input[name=\"radio_authorization\"][value=\"" + findings.technical_impact.authorization + "\"]").checked = true;
 
-        checked_boxes = findings.controls;
-        for (i = 0; i < checked_boxes.length; ++i) {
-           control = document.getElementById(checked_boxes[i].id)
+        const checked_boxes = findings.controls;
+        for (let i = 0; i < checked_boxes.length; ++i) {
+           let control = document.getElementById(checked_boxes[i].id)
            control.checked = "checked";
         }
     }

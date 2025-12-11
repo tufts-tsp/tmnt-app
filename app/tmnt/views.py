@@ -170,6 +170,7 @@ def upload_file(request):
 def workspace(request, project_name):
     # print('User:', request.user)
     project_name = get_object_or_404(Project, name=project_name, user=request.user)
+    experiment_mode = project_name.experiment_mode
     return render(request, "tmnt/asset_viewer.html", locals())
 
 def add_entity(request):
@@ -177,8 +178,9 @@ def add_entity(request):
     name = request.POST.get("name")
     type = request.POST.get("type")
     project = get_object_or_404(Project, name=request.POST.get("project_name"), user=request.user)
-    print(f'add_entity received type: {type}')
-    # try:
+    # print(f'add_entity received type: {type}')
+    if project.experiment_mode:
+        return JsonResponse({"error": "Adding entities forbidden in experiment mode."}, status=409)
     if type == "Actor":
         status_code = add_entity_actor(request, project)
     elif type == "Datastore":
@@ -196,9 +198,6 @@ def add_entity(request):
     else:
         print(f"ERROR: unrecognized type: {type}")
         status_code = 500
-    # except Exception as e:
-    #     print('Exception in add_entity:', e)
-    #     status_code =
     return JsonResponse(status_code, safe=False)  # return error
 
 def add_entity_actor(request, project: Project) -> int:
@@ -272,6 +271,8 @@ def add_externalasset(request):
     open_ports_str = request.POST.get("open_port")
     machine_type = request.POST.get("machine_type")
     project = get_object_or_404(Project, name=request.POST.get("project_name"), user=request.user)
+    if project.experiment_mode:
+        return JsonResponse({"error": "Adding entities forbidden in experiment mode."}, status=409)
     # machine = Machine.PHYSICAL
     # if machine_type == "Virtual":
     #     machine = Machine.VIRTUAL
@@ -303,6 +304,8 @@ def rename_dataflow(request):
     source = request.POST.get("source")
     dest = request.POST.get("dest")
     project = get_object_or_404(Project, name=request.POST.get("project_name"), user=request.user)
+    if project.experiment_mode:
+        return JsonResponse({"error": "Renaming dataflows forbidden in experiment mode."}, status=409)
     with transaction.atomic():
         DataFlow.objects.filter(source__name=source, dest__name=dest, project=project).update(name=new_name)
         ua = UserAction(username=request.user, project=project, action=f"rename dataflow {old_name} -> {new_name}",
@@ -314,6 +317,8 @@ def rename_entity(request):
     old_name = request.POST.get("old_name")
     new_name = request.POST.get("new_name")
     project = get_object_or_404(Project, name=request.POST.get("project_name"), user=request.user)
+    if project.experiment_mode:
+        return JsonResponse({"error": "Renaming entities forbidden in experiment mode."}, status=409)
     if not old_name or not new_name:
         return JsonResponse({"error": "missing old_name or new_name"}, status=400)
 
@@ -352,6 +357,8 @@ def delete_asset(request):
     name = request.POST.get("name")
     asset_type = request.POST.get("type")
     project = get_object_or_404(Project, name=request.POST.get("project_name"), user=request.user)
+    if project.experiment_mode:
+        return JsonResponse({"error": "Deleting assets forbidden in experiment mode."}, status=409)
     Entity.objects.filter(name=name, project=project).delete()  # delete the parent entity
     # below code shouldn't be necessary if foreign key on delete cascade works properly
     # if asset_type == "Process" or asset_type == "Lambda" or asset_type == "Server":

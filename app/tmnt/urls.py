@@ -38,6 +38,6 @@ urlpatterns = [
     path("delete_project/<str:project_name>", views.delete_project, name="delete_project"),
     path("edit_project/<str:project_name>", views.edit_project, name="edit_project"),
     path("admin/", admin.site.urls),
-    path("register/", SignUpView.as_view(), name="register"),
+    # path("register/", SignUpView.as_view(), name="register"),
     path("accounts/", include("django.contrib.auth.urls")),  # For login/logout
 ]
