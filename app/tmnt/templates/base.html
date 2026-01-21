@@ -14,6 +14,34 @@
 <link rel="stylesheet" href="{% static 'tmnt.css' %}">
     <title>{% block title %}Base{% endblock %}</title>
 </head>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const shareBtn = document.getElementById("share-btn");
+        if (!shareBtn) return;
+    
+        shareBtn.addEventListener("click", function (e) {
+            e.preventDefault();
+    
+            fetch("{% url 'reset_tutorial' %}", {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": "{{ csrf_token }}"
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Failed to reset tutorial");
+                }
+                // Redirect to projects where onboarding will auto-start 
+                window.location.href = "{% url 'view_projects' %}";
+            })
+            .catch(err => {
+                console.error(err);
+                alert("Failed to reset onboarding state");
+            });
+        });
+    });
+    </script>
 <body>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
@@ -29,11 +57,12 @@
             {% else %}
                 <a href="{%  url 'login' %}">Login</a>
             {% endif %}
-            <a href="#share">Share</a>
+            <a href="#" id="share-btn">Share</a>
     {#        <a href="#export">Export</a>#}
         </div>
     </div>
     {% block content %}
     {% endblock %}
+    {% include "registration/logout.html" %}
 </body>
 </html>

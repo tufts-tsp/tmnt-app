@@ -356,4 +356,89 @@
         <p>Please <a href="{% url 'login' %}">log in</a> or <a href="{% url 'register' %}">register</a> a new account.</p>
     </div>
 {% endif %}
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Check if we arrived here from the Step 1 (Project List)
+        if (localStorage.getItem('onboarding_step') === 'workspace_start') {
+            
+            const tour = introJs();
+    
+            tour.setOptions({
+                steps: [
+                    {
+                        element: document.querySelector('.dfd_assetview'),
+                        intro: "This is your workspace. The diagram on the right shows your system architecture. You can click assets to see their details.",
+                        position: 'left'
+                    },
+                    {
+                        element: document.querySelector('img[title="Threats"]'),
+                        intro: "Click here to switch to the Threats panel where we identify 'What could go wrong?'",
+                        position: 'right'
+                    },
+                    {
+                        element: document.querySelector('#threats'),
+                        intro: "In this panel, you can create new threats. Give it a title, a category, and link it to an asset.",
+                        position: 'right',
+                        beforeLayerRender: function() {
+                            showSection('threats'); // Force the panel to open
+                        }
+                    },
+                    {
+                        element: document.querySelector('#threats .add_button[onclick="addThreat()"]'),
+                        intro: "After filling out the details, click 'Add Threat' to save it to your model.",
+                        position: 'top'
+                    },
+                    {
+                        element: document.querySelector('img[title="Controls"]'),
+                        intro: "Next is the Controls panel. This is for 'What are we doing about it?'",
+                        position: 'right'
+                    },
+                    {
+                        element: document.querySelector('#controls'),
+                        intro: "Create controls here. You can then associate them with threats in the Findings tab or by clicking the threat itself.",
+                        position: 'right',
+                        beforeLayerRender: function() {
+                            showSection('controls'); // Force the panel to open
+                        }
+                    },
+                    {
+                        element: document.querySelector('img[title="Assumptions"]'),
+                        intro: "Finally, the 'Thought Bubble' is for Assumptions. Use this to document things you assume to be true about the environment.",
+                        position: 'right'
+                    }
+                ],
+                showProgress: true,
+                exitOnOverlayClick: false
+            });
+    
+            // When switching steps, make sure the correct panel is visible
+            tour.onbeforechange(function(targetElement) {
+                if (targetElement.id === 'threats') {
+                    showSection('threats');
+                } else if (targetElement.id === 'controls') {
+                    showSection('controls');
+                } else if (targetElement.id === 'assumptions') {
+                    showSection('assumptions');
+                }
+            });
+    
+            tour.oncomplete(cleanupOnboarding);
+            tour.onexit(cleanupOnboarding);
+    
+            tour.start();
+        }
+    
+        function cleanupOnboarding() {
+            localStorage.removeItem('onboarding_step');
+            // Tell the server this user has officially completed the tour
+            fetch("{% url 'mark_tutorial_seen' %}", {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": "{{ csrf_token }}",
+                    "Content-Type": "application/json"
+                }
+            });
+        }
+    });
+    </script>
 {% endblock %}
