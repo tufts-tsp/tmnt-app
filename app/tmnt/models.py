@@ -1,6 +1,12 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+class ParticipantUser(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    is_participant = models.BooleanField(default=True)
+    experiment_group = models.CharField(max_length=100, blank=True, null=True)
+
+
 class Project(models.Model):
     name = models.CharField(max_length=100)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="my_projects")

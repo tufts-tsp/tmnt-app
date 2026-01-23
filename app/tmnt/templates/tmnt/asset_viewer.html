@@ -12,13 +12,12 @@
 <div class="lowerArea">
     <!-- Left sidebar to switch between modes -->
     <div class="modeBar">
-        <img src="{% static 'assets.png' %}" width="75%" style="padding-bottom: 10px;" onclick= "showSection('assets')" title="Data Flow Diagram" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Data Flow Diagram">
-        <img src="{% static 'warnings.png' %}" width="75%" style="padding-bottom: 10px;" onclick="showSection('threats')" title="Threats" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Threats">
-        <img src="{% static 'wrench.png' %}" width="75%" style="padding-bottom: 10px;"  onclick="showSection('controls')" title="Controls" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Controls">
-        <img src="{% static 'magnify.png' %}" width="75%" style="padding-bottom: 10px;" onclick="showSection('findings')" title="Findings" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Findings">
-{#        insert a horizontal break #}
+        <img src="{% static 'assets.png' %}" width="75%" style="padding-bottom: 10px; cursor: pointer;" onclick= "showSection('assets')" title="Data Flow Diagram" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Data Flow Diagram">
+        <img src="{% static 'warnings.png' %}" width="75%" style="padding-bottom: 10px; cursor: pointer;" onclick="showSection('threats')" title="Threats" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Threats">
+        <img src="{% static 'wrench.png' %}" width="75%" style="padding-bottom: 10px; cursor: pointer;"  onclick="showSection('controls')" title="Controls" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Controls">
+        <img src="{% static 'magnify.png' %}" width="75%" style="padding-bottom: 10px; cursor: pointer;" onclick="showSection('findings')" title="Findings" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Findings">
         <hr>
-        <img src="{% static 'thought-cloud.svg' %}" width="75%" style="padding-bottom: 10px;" onclick="showSection('assumptions')" title="Assumptions" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Assumptions">
+        <img src="{% static 'thought-cloud.svg' %}" width="75%" style="padding-bottom: 10px; cursor: pointer;" onclick="showSection('assumptions')" title="Assumptions" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Assumptions">
 
     </div>
 
@@ -32,14 +31,14 @@
 
             <h3>Assets</h3>
             <div class="button_container">
-                <button type="button" class="asset_button" onclick="addElement(this.innerHTML)">Actor</button>
-                <button type="button" class="asset_button" onclick="addElement(this.innerHTML)">Server</button>
-                <button type="button" class="asset_button" onclick="addElement(this.innerHTML)">Data Store</button>
+                <button type="button" class="asset_button experiment_disabled" onclick="addElement(this.innerHTML)">Actor</button>
+                <button type="button" class="asset_button experiment_disabled" onclick="addElement(this.innerHTML)">Server</button>
+                <button type="button" class="asset_button experiment_disabled" onclick="addElement(this.innerHTML)">Data Store</button>
             </div>
             <div class="button_container">
-                <button type="button" class="asset_button" onclick="addElement(this.innerHTML)">Lambda</button>
-                <button type="button" class="asset_button" onclick="addElement(this.innerHTML)">Process</button>
-                <button type="button" class="asset_button" onclick="addElement(this.innerHTML)">External Entity</button>
+                <button type="button" class="asset_button experiment_disabled" onclick="addElement(this.innerHTML)">Lambda</button>
+                <button type="button" class="asset_button experiment_disabled" onclick="addElement(this.innerHTML)">Process</button>
+                <button type="button" class="asset_button experiment_disabled" onclick="addElement(this.innerHTML)">External Entity</button>
             </div>
             <div id="asset_info_form" style="display:none; background:#f3f3f3; padding:10px; width:fit-content"></div>
             <br>
@@ -59,7 +58,7 @@
             </select>
 
             <br>
-            <button type="button" class="add_button" onclick="addDataFlow(this.innerHTML)" disabled>Add Data Flow</button>
+            <button type="button" class="add_button experiment_disabled" onclick="addDataFlow(this.innerHTML)" disabled>Add Data Flow</button>
 
             <br>
 
@@ -76,7 +75,7 @@
             <button type="button" class="add_button" id="components_button" onclick="addComponents()" disabled>Add More Components</button>
 
             <br>
-            <button type="button" class="add_button" onclick="addWorkFlow()" disabled>Add Work Flow</button>
+            <button type="button" class="add_button experiment_disabled" onclick="addWorkFlow()" disabled>Add Work Flow</button>
 
             <br>
 
@@ -331,9 +330,12 @@
 // get project name from Django context
     const projectName = "{{ project_name|escapejs }}";
     const username = "{{ user.username|escapejs }}";
+    const experimentMode = "{{ experiment_mode|escapejs }}";
     // Generating URLs for AJAX POST calls
     const addEntityUrl = "{%  url 'api/add_entity' %}"
     const addExternalAssetUrl = "{% url 'api/add_externalasset' %}";
+    const renameEntityUrl = "{% url 'api/rename_entity' %}";
+    const renameDataFlowUrl = "{% url 'api/rename_dataflow' %}";
     const editBoundaryUrl = "{% url 'api/edit_boundary' %}";
     const deleteAssetUrl = "{% url 'api/delete_asset' %}";
     const deleteAllAssetsUrl = "{%  url 'api/delete_all_assets' %}";

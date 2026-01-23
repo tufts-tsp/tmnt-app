@@ -17,6 +17,8 @@ urlpatterns = [
     # path("api/add_dataflow", views.add_dataflow, name="api/add_dataflow"),
     path("api/edit_boundary", views.edit_boundary, name="api/edit_boundary"),
     path("api/add_entity", views.add_entity, name="api/add_entity"),
+    path("api/rename_entity", views.rename_entity, name="api/rename_entity"),
+    path("api/rename_dataflow", views.rename_dataflow, name="api/rename_dataflow"),
     path("api/add_externalasset", views.add_externalasset, name="api/add_externalasset"),
     path("api/add_threat", views.add_threat, name="api/add_threat"),
     path("api/edit_threat", views.edit_threat, name="api/edit_threat"),
@@ -36,7 +38,7 @@ urlpatterns = [
     path("delete_project/<str:project_name>", views.delete_project, name="delete_project"),
     path("edit_project/<str:project_name>", views.edit_project, name="edit_project"),
     path("admin/", admin.site.urls),
-    path("register/", SignUpView.as_view(), name="register"),
+    # path("register/", SignUpView.as_view(), name="register"),
     path("accounts/", include("django.contrib.auth.urls")),  # For login/logout
     path("mark_tutorial_seen/", views.mark_tutorial_seen, name="mark_tutorial_seen"),
     path("reset-tutorial/", views.reset_tutorial, name="reset_tutorial"),
