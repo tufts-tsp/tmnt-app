@@ -1,6 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from .forms import UploadDFDFileForm, NewProjectForm
 from .scripts.img_test import *
 from .models import *
@@ -11,7 +11,10 @@ import subprocess
 from django.http import JsonResponse, HttpResponseRedirect
 from django.contrib.auth.forms import UserCreationForm
 from django.views.generic import CreateView
+from django.views.decorators.http import require_POST
 from django.urls import reverse_lazy
+from django.urls import reverse
+from .models import UserProfile
 
 import grpc
 from controller_pb2_grpc import ControllerStub
@@ -33,7 +36,31 @@ class SignUpView(CreateView):
 
     def form_valid(self, form):
         response = super().form_valid(form)
+
+        user = self.object
+
+        UserProfile.objects.get_or_create(
+            user=user,
+            defaults={"has_seen_tutorial": False}
+        )
+
         return response
+
+@login_required
+@require_POST
+def mark_tutorial_seen(request):
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    profile.has_seen_tutorial = True
+    profile.save()
+    return JsonResponse({"status": "ok"})
+
+@login_required
+@require_POST
+def reset_tutorial(request):
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    profile.has_seen_tutorial = False
+    profile.save()
+    return JsonResponse({"status": "ok"})
 
 # class ProjectsListView(LoginRequiredMixin, ListView):
 #     model = Project
@@ -46,10 +73,18 @@ class SignUpView(CreateView):
 
 @login_required
 def project_list(request):
-    # return a queryset of projects associated with the user
-    projects = Project.objects.filter(user=request.user).order_by("-created_at")[:10]  # get last 10 projects
-    print(type(projects))
-    return render(request, "tmnt/projects.html", locals())
+    projects = Project.objects.filter(user=request.user).order_by("-created_at")[:10]
+
+    # Ensure profile exists (prevents crashes for old accounts)
+    profile, created = UserProfile.objects.get_or_create(user=request.user)
+
+    show_tutorial = not profile.has_seen_tutorial
+
+    return render(request, "tmnt/projects.html", {
+        "projects": projects,
+        "show_tutorial": show_tutorial,
+    })
+
 
 @login_required
 def create_project(request):
@@ -454,17 +489,36 @@ def delete_assumption(request):
 def add_control(request):
     name = request.POST.get("name")
     description = request.POST.get("description")
-    assets = request.POST.getlist("assets[]")
+    asset_names = request.POST.getlist("assets[]")
     project = get_object_or_404(Project, name=request.POST.get("project_name"), user=request.user)
+
     with transaction.atomic():
-        control = Control(name=name, description=description, project=project)
-        control.save()
-        assets = Entity.objects.filter(name__in=assets, project=project)
-        print('add_control received assets:', len(assets), assets)
+        # Try to find existing control
+        control, created = Control.objects.get_or_create(
+            name=name,
+            project=project,
+            defaults={"description": description}
+        )
+
+        # If control exists but description changed, optionally update it
+        if not created and description and control.description != description:
+            control.description = description
+            control.save()
+
+        # Add new assets
+        assets = Entity.objects.filter(name__in=asset_names, project=project)
         control.assets.add(*assets)
         control.save()
-        ua = UserAction(username=request.user, project=project, action=f'create control', entities=name, details=f'Assets: {assets}; Description: {description}')
+
+        ua = UserAction(
+            username=request.user,
+            project=project,
+            action='create or update control',
+            entities=name,
+            details=f'Assets: {asset_names}; Description: {description}'
+        )
         ua.save()
+
     return JsonResponse(200, safe=False)
 
 def edit_control(request):

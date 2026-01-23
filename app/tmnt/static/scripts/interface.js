@@ -1813,7 +1813,7 @@ function setupOptionsMenuToggles() {
 // close all menus when clicking outside
 document.addEventListener("click", (e) => {
     const optionsMenu = document.getElementById("options");
-    if (!optionsMenu.contains(e.target) && e.target.id !== "options-button") {
+    if (optionsMenu && !optionsMenu.contains(e.target) && e.target.id !== "options-button") {
         optionsMenu.querySelectorAll(".open").forEach((li) => li.classList.remove("open"));
     }
 });

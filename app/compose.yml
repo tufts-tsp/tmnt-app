@@ -1,0 +1,17 @@
+services:
+  django-web:
+    build: .
+    container_name: tmnt
+    ports:
+      - "8086:8086"
+    environment:
+        DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+        DJANGO_DEBUG: ${DJANGO_DEBUG}
+        DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
+        DB_TITLE: ${DB_TITLE}
+        DB_USER: ${DB_USER}
+        DB_PASSWORD: ${DB_PASSWORD}
+        DB_HOST: ${DB_HOST}
+        DB_PORT: ${DB_PORT}
+    env_file:
+      - .env

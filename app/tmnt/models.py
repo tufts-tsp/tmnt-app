@@ -130,3 +130,9 @@ class UserAction(models.Model):
     details = models.TextField(blank=True)
     time = models.DateTimeField(auto_now_add=True)
 
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    has_seen_tutorial = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Profile for {self.user.username}"
