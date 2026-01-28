@@ -1,6 +1,7 @@
+from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from .forms import UploadDFDFileForm, NewProjectForm
 from .scripts.img_test import *
 from .models import *
@@ -50,6 +51,21 @@ def project_list(request):
     projects = Project.objects.filter(user=request.user).order_by("-created_at")[:10]  # get last 10 projects
     print(type(projects))
     return render(request, "tmnt/projects.html", locals())
+
+@login_required
+def submit_experiment(request):
+    if request.user.is_authenticated:
+        # Mark the user as inactive
+        request.user.is_active = False
+        request.user.save()
+        # Optional: Add a message for feedback
+        # messages.info(request, "You have been logged out and your account is now inactive.")
+
+    # Log the user out
+    logout(request)
+    # Redirect to a desired page (e.g., the home page or a specific inactive page)
+    # TODO: replace url with Qualtrics survey when survey is live
+    return redirect('https://tsp.cs.tufts.edu?cc=' + request.user.username)
 
 @login_required
 def create_project(request):

@@ -85,7 +85,14 @@ window.onload = function() {
     const displayTime = date.toLocaleTimeString();
     document.getElementById('datetime').innerHTML += displayDate + " " + displayTime;
     if (experimentMode) { // disable these features when in experiment mode
+        console.debug("Experiment mode enabled: disabling certain features.");
         document.querySelectorAll(".experiment_disabled").forEach(elem => {elem.disabled = true;});
+        const submit_button = document.getElementById("submit-exp-button");
+        submit_button.style.display = "block";
+    }
+    else {
+        console.debug("Experiment mode disabled.");
+        document.querySelectorAll(".experiment_disabled").forEach(elem => {elem.disabled = false;});
     }
 
     let area = d3.select('.dfd_assetview').node().getBoundingClientRect();
@@ -2731,7 +2738,7 @@ function updateAssetDropdowns() {
             dropdown.add(new Option(
                 d3.select(this).select(".asset_label").text(),
                 nodeIndex(d.id)
-            ))
+            ));
         }
     });
     if (experimentMode) {

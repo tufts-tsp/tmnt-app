@@ -24,10 +24,10 @@
             {% if user.is_authenticated %}
             <a href="#" class="logout-button" style="background-color: #dc3545" data-bs-toggle="modal" data-bs-target="#logoutModal" role="button">Log Out</a>
             <a href="{% url 'view_projects' %}">Profile</a>
+            <a href="#" id="submit-exp-button" style="background-color: #dc3545; display: none;" data-bs-toggle="modal" data-bs-target="#submitExpModal" role="button">Submit Experiment</a>
             {% else %}
                 <a href="{%  url 'login' %}">Login</a>
             {% endif %}
-            <a href="#share">Share</a>
     {#        <a href="#export">Export</a>#}
         </div>
     </div>

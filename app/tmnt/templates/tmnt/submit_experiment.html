@@ -1,0 +1,23 @@
+<!-- Modal used for submitting experiment -->
+<div class="modal fade" id="submitExpModal" tabindex="-1" aria-labelledby="submitExpModal" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="submitExpModal">Confirm End Experiment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you are ready to submit the experiment?<br>
+                WARNING: after submitting the experiment, you will be logged out and will not be able to make further changes.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Return to experiment</button>
+                <!-- The submit form goes here -->
+                <form action="{% url 'submit_experiment' %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">I am ready to submit</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

@@ -39,5 +39,6 @@ urlpatterns = [
     path("edit_project/<str:project_name>", views.edit_project, name="edit_project"),
     path("admin/", admin.site.urls),
     # path("register/", SignUpView.as_view(), name="register"),
+    path("submit_experiment/", views.submit_experiment, name="submit_experiment"),
     path("accounts/", include("django.contrib.auth.urls")),  # For login/logout
 ]

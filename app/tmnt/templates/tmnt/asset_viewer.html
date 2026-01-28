@@ -7,6 +7,7 @@
     {% if user.is_authenticated %}
         {% include "registration/logout.html" %}
         {% include "tmnt/new_entity.html" %}
+        {% include "tmnt/submit_experiment.html" %}
 
 <!-- Everything below the top of the screen -->
 <div class="lowerArea">
@@ -330,7 +331,7 @@
 // get project name from Django context
     const projectName = "{{ project_name|escapejs }}";
     const username = "{{ user.username|escapejs }}";
-    const experimentMode = "{{ experiment_mode|escapejs }}";
+    const experimentMode = "{{ experiment_mode|escapejs }}" === "True"; // Convert to boolean
     // Generating URLs for AJAX POST calls
     const addEntityUrl = "{%  url 'api/add_entity' %}"
     const addExternalAssetUrl = "{% url 'api/add_externalasset' %}";
