@@ -325,21 +325,16 @@
 </div>
 
 <!-- JavaScript code starts here -->
-
 <script type="text/javascript">
-// get project name from Django context
-    const projectName = "{{ project_name|escapejs }}";
-    const username = "{{ user.username|escapejs }}";
-    const experimentMode = "{{ experiment_mode|escapejs }}";
-    // Generating URLs for AJAX POST calls
-    const addEntityUrl = "{%  url 'api/add_entity' %}"
+    // URLs and Config
+    const loadDfdUrl = "{% url 'api/load_dfd' project_name=project_name %}";
+    const addEntityUrl = "{% url 'api/add_entity' %}";
     const addExternalAssetUrl = "{% url 'api/add_externalasset' %}";
     const renameEntityUrl = "{% url 'api/rename_entity' %}";
     const renameDataFlowUrl = "{% url 'api/rename_dataflow' %}";
     const editBoundaryUrl = "{% url 'api/edit_boundary' %}";
     const deleteAssetUrl = "{% url 'api/delete_asset' %}";
-    const deleteAllAssetsUrl = "{%  url 'api/delete_all_assets' %}";
-    const loadDfdUrl = "{% url 'api/load_dfd' project_name=project_name %}";
+    const deleteAllAssetsUrl = "{% url 'api/delete_all_assets' %}";
     const addThreatUrl = "{% url 'api/add_threat' %}";
     const editThreatUrl = "{% url 'api/edit_threat' %}";
     const deleteThreatUrl = "{% url 'api/delete_threat' %}";
@@ -350,97 +345,131 @@
     const editControlUrl = "{% url 'api/edit_control' %}";
     const deleteControlUrl = "{% url 'api/delete_control' %}";
     const updateNodePositionUrl = "{% url 'api/update_node_position' %}";
+
+    const projectName = "{{ project_name|escapejs }}";
+    const username = "{{ user.username|escapejs }}";
+    const experimentMode = {{ experiment_mode|yesno:"true,false" }};
+    
+    // Globals
+    var onboardingTour; 
+
+    var showSection = window.showSection || function(icon) { console.warn("App logic not loaded yet."); };
+
+    function triggerTourNext() {
+        if (onboardingTour) {
+            console.log("Forcing next step. Current:", onboardingTour.currentStep());
+            onboardingTour.nextStep();
+        }
+    }
 </script>
+
+<style>
+    /* Hide the 'X' Close button entirely */
+    .introjs-skipbutton {
+        display: none !important;
+    }
+
+    /* Ghost overlay logic for clicking through the mask */
+    .introjs-overlay { display: none !important; }
+    .introjs-helperLayer {
+        pointer-events: none !important;
+        background: transparent !important;
+        box-shadow: 0 0 0 5000px rgba(0, 0, 0, 0.7) !important;
+    }
+    
+    /* Button visibility management */
+    body[data-interaction="true"] .introjs-nextbutton { display: none !important; }
+    .introjs-prevbutton { display: none !important; }
+</style>
+
 <script type="text/javascript" src="{% static 'scripts/interface.js' %}"></script>
-{% else %}
-    <div class="container mt-5">
-        <h2 class="mb-4">Ready to start threat modeling?</h2>
-        <p>Please <a href="{% url 'login' %}">log in</a> or <a href="{% url 'register' %}">register</a> a new account.</p>
-    </div>
-{% endif %}
+
 <script>
     document.addEventListener("DOMContentLoaded", function () {
-        // Check if we arrived here from the Step 1 (Project List)
         if (localStorage.getItem('onboarding_step') === 'workspace_start') {
-            
-            const tour = introJs();
-    
-            tour.setOptions({
+            onboardingTour = introJs();
+            window.onboardingTour = onboardingTour;
+
+            onboardingTour.setOptions({
                 steps: [
-                    {
-                        element: document.querySelector('.dfd_assetview'),
-                        intro: "This is your workspace. The diagram on the right shows your system architecture. You can click assets to see their details.",
-                        position: 'left'
-                    },
-                    {
-                        element: document.querySelector('img[title="Threats"]'),
-                        intro: "Click here to switch to the Threats panel where we identify 'What could go wrong?'",
-                        position: 'right'
-                    },
-                    {
-                        element: document.querySelector('#threats'),
-                        intro: "In this panel, you can create new threats. Give it a title, a category, and link it to an asset.",
-                        position: 'right',
-                        beforeLayerRender: function() {
-                            showSection('threats'); // Force the panel to open
-                        }
-                    },
-                    {
-                        element: document.querySelector('#threats .add_button[onclick="addThreat()"]'),
-                        intro: "After filling out the details, click 'Add Threat' to save it to your model.",
-                        position: 'top'
-                    },
-                    {
-                        element: document.querySelector('img[title="Controls"]'),
-                        intro: "Next is the Controls panel. This is for 'What are we doing about it?'",
-                        position: 'right'
-                    },
-                    {
-                        element: document.querySelector('#controls'),
-                        intro: "Create controls here. You can then associate them with threats in the Findings tab or by clicking the threat itself.",
-                        position: 'right',
-                        beforeLayerRender: function() {
-                            showSection('controls'); // Force the panel to open
-                        }
-                    },
-                    {
-                        element: document.querySelector('img[title="Assumptions"]'),
-                        intro: "Finally, the 'Thought Bubble' is for Assumptions. Use this to document things you assume to be true about the environment.",
-                        position: 'right'
-                    }
+                    { element: '.dfd_assetview', intro: "Workspace info...", interaction: false }, // Step 0
+                    { element: 'img[src*="warnings.png"]', intro: "Click the Threats icon.", interaction: true }, // Step 1
+                    { element: '#showSelectedAssets', intro: "Click 'Select Assets'.", interaction: true }, // Step 2
+                    { element: '.dfd_assetview', intro: "Select the asset on the diagram...", interaction: false }, // Step 3
+                    { element: '#display_selected_for_threats', intro: "Click 'Done Selecting'.", interaction: true }, // Step 4
+                    { element: '#threat_title', intro: "Enter a title and then click Enter.", interaction: true }, // Step 5
+                    { element: '#threats button[onclick="addThreat()"]', intro: "Click 'Add Threat'.", interaction: true }, // Step 6
+                    { element: '#messageModal .modal-content', intro: "Success! Click 'OK' to continue.", interaction: true }, // Step 7
+                    { element: '.dfd_assetview', intro: "Now select the element you just added a threat to.", interaction: true }, // Step 8
+                    { element: '.dfd_detailsbar', intro: "Now click Options > Delete... > Threat...", interaction: true }, // Step 9
+                    { element: '#threat_deletion', intro: "Now select the threat you created and click Done.", interaction: false }, // Step 10
+                    { element: 'img[src*="wrench.png"]', intro: "Now click the Controls icon.", interaction: true }, // Step 11
+                    { element: 'img[src*="thought-cloud.svg"]', intro: "Finally, click the Assumptions icon.", interaction: true } // Step 12
                 ],
-                showProgress: true,
-                exitOnOverlayClick: false
+                exitOnOverlayClick: false,
+                exitOnEsc: false,
+                showStepNumbers: false,
+                disableInteraction: false
             });
-    
-            // When switching steps, make sure the correct panel is visible
-            tour.onbeforechange(function(targetElement) {
-                if (targetElement.id === 'threats') {
-                    showSection('threats');
-                } else if (targetElement.id === 'controls') {
-                    showSection('controls');
-                } else if (targetElement.id === 'assumptions') {
-                    showSection('assumptions');
+
+            // Text updates and refreshes
+            onboardingTour.onchange(function(targetElement) {
+                const step = this.currentStep();
+                console.log("Tour transitioned to step:", step);
+
+                if (step === 3) {
+                    const assetName = nodes[0].asset_name;
+                    const newText = "Select asset <strong>" + assetName + "</strong> on the diagram, then click 'Next'.";
+                    
+                    // Update intro text
+                    if (this._introItems && this._introItems[step]) {
+                        this._introItems[step].intro = newText;
+                    }
+
+                    // Force immediate DOM update
+                    setTimeout(() => {
+                        const tooltipText = document.querySelector('.introjs-tooltiptext');
+                        if (tooltipText) {
+                            tooltipText.innerHTML = newText;
+                        }
+                        this.refresh();
+                    }, 50);
                 }
             });
-    
-            tour.oncomplete(cleanupOnboarding);
-            tour.onexit(cleanupOnboarding);
-    
-            tour.start();
-        }
-    
-        function cleanupOnboarding() {
-            localStorage.removeItem('onboarding_step');
-            // Tell the server this user has officially completed the tour
-            fetch("{% url 'mark_tutorial_seen' %}", {
-                method: "POST",
-                headers: {
-                    "X-CSRFToken": "{{ csrf_token }}",
-                    "Content-Type": "application/json"
+
+            onboardingTour.onbeforechange(function() {
+                const step = this.currentStep();
+                
+                // Step 3 -> 4 validation
+                if (step === 4 && onboardingTour._direction === 'forward') {
+                    const selected = nodes.filter(n => n.selected);
+                    if (selected.length != 1 || selected[0].id != nodes[0].id) {
+                        alert("Please only select asset " + (nodes[0]?.asset_name || "the correct asset") + " on the diagram first!");
+                        return false; 
+                    }
+                }
+
+                // Step 5 validation
+                if (step === 6 && onboardingTour._direction === 'forward') {
+                    if (document.getElementById('threat_title').value.trim() === "") {
+                        alert("Title cannot be empty!");
+                        return false;
+                    }
+                }
+
+                document.body.setAttribute('data-interaction', [1, 2, 4, 5, 6, 7, 9, 10].includes(step));
+                
+                // Sidebar auto-switching
+                if (typeof showSection === "function") {
+                    if ([2, 4, 5, 6].includes(step)) showSection('threats');
+                    if (step === 9) showSection('controls');
+                    if (step === 10) showSection('assumptions');
                 }
             });
+
+            onboardingTour.start();
         }
     });
-    </script>
+</script>
+{% endif %}
 {% endblock %}

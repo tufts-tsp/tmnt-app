@@ -16,15 +16,18 @@ let multiselect = false;  // toggles whether multiple nodes can be selected
 
 // define an onclick listener for a d3 node that allows the user to select multiple nodes at a time
 function showSelectAssets(id, doneButtonId) {
-    // unselect all nodes
-    svg.dispatch('click');  // this will unselect all nodes and links
-    document.querySelectorAll("div.asset_selection").forEach(div => {div.innerText = "";});  // clear selected assets text
+    if (window.onboardingTour && window.onboardingTour.currentStep() === 2) {
+        window.triggerTourNext(); // Move from Step 2 to Step 3 (Workspace Instruction)
+    }
+    
+    svg.dispatch('click'); 
+    document.querySelectorAll("div.asset_selection").forEach(div => {div.innerText = "";}); 
     const done_button = document.getElementById(doneButtonId);
     const select_assets_button = document.getElementById(id);
 
-    select_assets_button.style.display = "none";  // hide Start selecting button
-    done_button.style.display = "block";  // show done selecting button
-    multiselect = true;  // allow multi selection
+    select_assets_button.style.display = "none"; 
+    done_button.style.display = "block"; 
+    multiselect = true; 
 }
 
 function displaySelectedAssets(panelName) {
@@ -73,6 +76,17 @@ function displaySelectedAssets(panelName) {
     else {
         console.error("Unknown panel name: " + panelName);
     }
+    if (window.onboardingTour && window.onboardingTour.currentStep() === 4) {
+        const selected = nodes.filter(node => node.selected);
+        if (selected.length > 0) {
+            window.triggerTourNext();
+        } else {
+            alert("Please select at least one asset!");
+            return; // Prevent button from swapping if nothing selected
+        }
+    }
+
+    multiselect = false;
 }
     
 
@@ -214,39 +228,37 @@ window.onresize = function() {
 // Toggles between the four question sections (What are we working on?, etc.) and Assumptions
 // Determines which one should be displayed.
 function showSection(icon) {
+
+    if (window.onboardingTour) {
+        const step = window.onboardingTour.currentStep();
+        if (icon === 'threats' && step === 1) {
+            triggerTourNext();
+        } 
+        else if (icon === 'controls' && step === 7) {
+                triggerTourNext();
+        }
+        else if (icon === 'assumptions' && step === 8) {
+                window.onboardingTour.complete();
+        }
+    }
+
     const divs = document.querySelectorAll('.items');
-    divs.forEach(div => {
-        div.style.display = "none";
-    });
-    document.getElementById(icon).style.display = "block";
-    document.querySelectorAll("div.asset_selection").forEach(div => {div.innerText = "";});  // clear selected assets text
+    divs.forEach(div => { div.style.display = "none"; });
+    const target = document.getElementById(icon);
+    if (target) target.style.display = "block";
 
-    // Prevent user from trying to add a threat or a control if no
-    // assets exist yet in the DFD
-    if (icon === "threats") {
-        let elems = document.getElementsByClassName('threat_textbox');
-        for (let elem of elems) {
-            elem.disabled = (nodes.length === 0);
+    document.querySelectorAll("div.asset_selection").forEach(div => { div.innerText = ""; });
+
+    if (icon === "threats" || icon === "controls") {
+        let className = icon === "threats" ? 'threat_textbox' : 'controls_textbox';
+        let items = document.getElementsByClassName(className);
+        for (let el of items) {
+            el.disabled = (nodes.length === 0);
         }
     }
-    else if (icon === "controls") {
-        let elems = document.getElementsByClassName('controls_textbox');
-        for (let elem of elems) {
-            elem.disabled = (nodes.length === 0);
-        }
-    }
-    // const elems = document.getElementsByClassName('add_button'); // this disables some testing buttons
-    // for (let elem of elems) {
-    //     elem.disabled = (nodes.length === 0);
-    // }
 
-    // Recalculate dropdowns when findings tab is opened
-    if (icon === "findings") {
-        updateThreatDropdown();
-    }
-    else if (icon === "assumptions") {
-        displayAllAssumptions();
-    }
+    if (icon === "findings") updateThreatDropdown();
+    else if (icon === "assumptions") displayAllAssumptions();
 }
 
 function showModal(title, message, options = {}) {
@@ -282,20 +294,36 @@ function showModal(title, message, options = {}) {
       confirmBtn.onclick = () => {
         const modal = bootstrap.Modal.getInstance(modalEl);
         modal.hide();
+        
+        // TOUR HOOK: If we are on the Alert step (Step 7), move to Controls (Step 8)
+        if (window.onboardingTour && window.onboardingTour.currentStep() === 7) {
+            window.triggerTourNext();
+        }
+
         if (options.type === 'prompt') resolve(inputEl.value.trim());
         else resolve(true);
       };
   
       modalFooter.append(cancelBtn, confirmBtn);
   
-      // Style & show modal
       const modal = new bootstrap.Modal(modalEl);
-      modalEl.addEventListener('show.bs.modal', () => {
-        requestAnimationFrame(() => {
-          $('.modal-backdrop').last().addClass('message-modal-backdrop');
-        });
-      });
-      modal.show();
+    
+        modalEl.addEventListener('shown.bs.modal', () => {
+            // Only progress if we are on the button click step
+            if (window.onboardingTour && window.onboardingTour.currentStep() === 6) {
+                window.triggerTourNext();
+                
+                setTimeout(() => {
+                    window.onboardingTour.refresh();
+                }, 50); 
+            }
+            
+            requestAnimationFrame(() => {
+                $('.modal-backdrop').last().addClass('message-modal-backdrop');
+            });
+        }, { once: true }); 
+
+        modal.show();
   
       // Autofocus input when prompt is shown
       if (options.type === 'prompt') {
@@ -988,8 +1016,9 @@ function getRadius(node, dx, dy, L) {
     };
   }
 
-  // gives nodes new location every time the force simulation runs
   function ticked() {
+    if (!container) return;
+
     container.selectAll(".link")
       .attr("x1", d => linkEndpoints(d.source, d.target).x1)
       .attr("y1", d => linkEndpoints(d.source, d.target).y1)
@@ -998,14 +1027,14 @@ function getRadius(node, dx, dy, L) {
 
     // Transform nodes
     container.selectAll(".node_group")
-        .attr("transform", function(d) { return "translate("+ d.x + "," + d.y + ")"; });
+        .attr("transform", d => "translate("+ d.x + "," + d.y + ")");
 
     // Transform dataflows
-    container.selectAll(".link_group").selectAll("text")
-        .attr("transform", function(d) { return "translate("+ (d.source.x + d.target.x)/2 + "," + (d.source.y + d.target.y)/2 + ")"; });
+        container.selectAll(".link_group").selectAll("text")
+        .attr("transform", d => "translate("+ (d.source.x + d.target.x)/2 + "," + (d.source.y + d.target.y)/2 + ")");
 
     // Transform trust boundaries
-    container.selectAll(".boundary")
+        container.selectAll(".boundary")
         .attr("d", function(d) {
             let boundaryName = d3.select(this).attr("boundaryName");
             let assets = boundaries[boundaryName];
@@ -1291,6 +1320,11 @@ function clicked(e) {
 
     // create the options button for the asset
     createAssetOptions();
+
+    if (window.onboardingTour && window.onboardingTour.currentStep() === 3) {
+        const selectedCount = nodes.filter(n => n.selected).length;
+        console.log("Selected assets:", selectedCount);
+    }
 }
 
 function editAssociated(asset) {

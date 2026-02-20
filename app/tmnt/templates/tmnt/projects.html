@@ -10,10 +10,11 @@
         <h2>Projects</h2>
             <div class="row">
                 <div class="col-md-12">
-                    <a href="{% url 'create_project' %}" class="btn btn-primary mb-3">Create New Project</a>
+                    <a href="{% url 'create_project' %}" class="btn btn-primary mb-3" id="newProjectBtn">Create New Project</a>
                 </div>
             </div>
-            <div class="row">
+            
+            <div class="row" id="projectList">
                 {% if not projects %}
                     <div class="col-md-12">
                         <p>Create a new project to get started.</p>
@@ -40,5 +41,47 @@
         {# Failsafe: this shouldn't be visible #}
         <h2>Please log in to view your projects.</h2>
         <a href="{% url 'login' %}" class="btn btn-primary">Login</a>
+    {% endif %}
+    {% if show_tutorial %}
+    <script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const projectLink = document.querySelector("#projectList a");
+        
+        const steps = [
+            {
+                intro: "Welcome to TMNT! Let's get you started with a quick tour."
+            }
+        ];
+
+        if (projectLink) {
+            steps.push({
+                element: projectLink,
+                intro: "Click on your project to start threat modeling!",
+                position: 'right'
+            });
+        } else {
+            steps.push({
+                element: document.querySelector("#newProjectBtn"),
+                intro: "It looks like you don't have a project yet. Create one to start!"
+            });
+        }
+
+        const tour = introJs().setOptions({ steps: steps });
+
+        tour.onbeforeexit(function() {
+            // If the user exits normally by clicking a project link
+            // We don't mark as "seen" yet because they haven't finished Step 2
+        });
+
+        // If they click the project link specifically, set the progress flag
+        if (projectLink) {
+            projectLink.addEventListener('click', function() {
+                localStorage.setItem('onboarding_step', 'workspace_start');
+            });
+        }
+
+        tour.start();
+    });
+    </script>
     {% endif %}
 {% endblock %}
