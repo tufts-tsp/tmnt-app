@@ -65,7 +65,7 @@ def submit_experiment(request):
     logout(request)
     # Redirect to a desired page (e.g., the home page or a specific inactive page)
     # TODO: replace url with Qualtrics survey when survey is live
-    return redirect('https://tsp.cs.tufts.edu?cc=' + request.user.username)
+    return redirect('https://tufts.qualtrics.com/jfe/form/SV_1OgC7ChGZa047Yi?cc=' + request.user.username)
 
 @login_required
 def create_project(request):
