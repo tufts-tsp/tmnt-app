@@ -18,11 +18,9 @@ RUN python -m pip install -r requirements.txt
 
 EXPOSE 8086
 
-RUN python manage.py makemigrations
-RUN python manage.py migrate
+RUN python manage.py makemigrations && python manage.py migrate
 
 ENTRYPOINT ["python", "manage.py"]
 CMD ["runserver", "0.0.0.0:8086"]
-#CMD ["python", "manage.py"]
 # only for gunicorn below!
 #CMD ["gunicorn", "--bind", "0.0.0.0:8086", "tmnt.wsgi:application"]
