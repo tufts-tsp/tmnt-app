@@ -9,12 +9,20 @@
 <head>
 <body>
 
-    <div id = 'menuBar'>
+    <div id='menuBar'>
         <h2>Threat Modeling Naturally Tool</h2>
-        <div class="topnav">
-            <a href="#" id="share-btn">Share</a>
-            <a href="#export">Export</a>
+        <div class="topnav" style="display: flex; align-items: center; justify-content: flex-end;">
+            
+            <a href="#" data-bs-toggle="modal" data-bs-target="#infoModal" title="Task Information" style="margin-right: 15px; display: flex; align-items: center;">
+                <img src="{% static 'info.png' %}" alt="Info" style="width: 24px; height: 24px;">
+            </a>
+            
+            <a href="#" id="share-btn" style="margin-right: 15px;">Share</a>
+            
+            <a href="#export" style="margin-right: 15px;">Export</a>
+            
             <a href="#profile">Profile</a>
+            
         </div>
     </div>
 

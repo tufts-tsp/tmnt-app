@@ -16,18 +16,20 @@ let multiselect = false;  // toggles whether multiple nodes can be selected
 
 // define an onclick listener for a d3 node that allows the user to select multiple nodes at a time
 function showSelectAssets(id, doneButtonId) {
-    if (window.onboardingTour && window.onboardingTour.currentStep() === 2) {
-        window.triggerTourNext(); // Move from Step 2 to Step 3 (Workspace Instruction)
+    if (window.onboardingTour) {
+        const step = window.onboardingTour.currentStep();
+        // Threats Select 
+        if (step === 7 || step === 15 || step === 32) {
+            window.triggerTourNext();
+        }
     }
     
     svg.dispatch('click'); 
-    document.querySelectorAll("div.asset_selection").forEach(div => {div.innerText = "";}); 
     const done_button = document.getElementById(doneButtonId);
     const select_assets_button = document.getElementById(id);
-
     select_assets_button.style.display = "none"; 
     done_button.style.display = "block"; 
-    multiselect = true; 
+    multiselect = true;
 }
 
 function displaySelectedAssets(panelName) {
@@ -76,13 +78,16 @@ function displaySelectedAssets(panelName) {
     else {
         console.error("Unknown panel name: " + panelName);
     }
-    if (window.onboardingTour && window.onboardingTour.currentStep() === 4) {
+    if (window.onboardingTour) {
+        const step = window.onboardingTour.currentStep();
         const selected = nodes.filter(node => node.selected);
-        if (selected.length > 0) {
+        
+        // Step 9: Threats Done | Step 17: Controls Done | Step 34: Assumptions Done
+        if ((step === 9 || step === 17 || step === 34) && selected.length > 0) {
             window.triggerTourNext();
-        } else {
+        } else if ((step === 9 || step === 17 || step === 34) && selected.length === 0) {
             alert("Please select at least one asset!");
-            return; // Prevent button from swapping if nothing selected
+            return;
         }
     }
 
@@ -163,7 +168,7 @@ window.onload = function() {
                 node.selected = false;
             }
             d3.selectAll(".asset").style("stroke", "black").style("stroke-width", "1");
-            d3.selectAll(".link").style("stroke", "black").style("stroke-width", "1").attr("marker-end", "url(#arrow)");
+            d3.selectAll(".link").style("stroke", "black").style("stroke-width", "2px", "important").attr("marker-end", "url(#arrow)");
             d3.selectAll(".dataflow_name").style("stroke", null).style("stroke-width", null);
             resetBottomBar();
         }
@@ -229,17 +234,13 @@ window.onresize = function() {
 // Determines which one should be displayed.
 function showSection(icon) {
 
-    if (window.onboardingTour) {
+    if (window.onboardingTour && window.onboardingTour.isActive()) {
         const step = window.onboardingTour.currentStep();
-        if (icon === 'threats' && step === 1) {
+        
+        if ((icon === 'threats' && step === 5) || (icon === 'controls' && step === 14) || (icon === 'assumptions' && step === 30)) {
+            console.log("Manual icon click detected on guided step. Progressing...");
             triggerTourNext();
         } 
-        else if (icon === 'controls' && step === 7) {
-                triggerTourNext();
-        }
-        else if (icon === 'assumptions' && step === 8) {
-                window.onboardingTour.complete();
-        }
     }
 
     const divs = document.querySelectorAll('.items');
@@ -268,10 +269,10 @@ function showModal(title, message, options = {}) {
     const modalFooter = document.getElementById('messageModalFooter');
     modalLabel.innerText = title || 'Notice';
     modalBody.innerHTML = message || '';
-    modalFooter.innerHTML = ''; // clear old buttons
+    modalFooter.innerHTML = ''; 
   
-    // For prompt modals, add an input field
     let inputEl = null;
+  
     if (options.type === 'prompt') {
       inputEl = document.createElement('input');
       inputEl.type = 'text';
@@ -295,55 +296,59 @@ function showModal(title, message, options = {}) {
         const modal = bootstrap.Modal.getInstance(modalEl);
         modal.hide();
         
-        // TOUR HOOK: If we are on the Alert step (Step 7), move to Controls (Step 8)
-        if (window.onboardingTour && window.onboardingTour.currentStep() === 7) {
+        // Progress onboarding tour steps if applicable
+        const step = window.onboardingTour ? window.onboardingTour.currentStep() : -1;
+        if (step === 12 || step === 20 || step === 26 || step === 29 || step === 39) {
             window.triggerTourNext();
         }
-
-        if (options.type === 'prompt') resolve(inputEl.value.trim());
-        else resolve(true);
+        
+        // Return the typed text if it's a prompt, otherwise return true for alerts/confirms
+        if (options.type === 'prompt') {
+            resolve(inputEl.value);
+        } else {
+            resolve(true);
+        }
       };
   
       modalFooter.append(cancelBtn, confirmBtn);
   
       const modal = new bootstrap.Modal(modalEl);
     
-        modalEl.addEventListener('shown.bs.modal', () => {
-            // Only progress if we are on the button click step
-            if (window.onboardingTour && window.onboardingTour.currentStep() === 6) {
-                window.triggerTourNext();
-                
-                setTimeout(() => {
-                    window.onboardingTour.refresh();
-                }, 50); 
-            }
-            
-            requestAnimationFrame(() => {
-                $('.modal-backdrop').last().addClass('message-modal-backdrop');
-            });
-        }, { once: true }); 
+      modalEl.addEventListener('shown.bs.modal', () => {
+          const step = window.onboardingTour ? window.onboardingTour.currentStep() : -1;
+          
+          if (step === 11 || step === 19 || step === 25 || step === 28 || step === 38) {
+              window.onboardingTour.nextStep();
+              
+              // Wait for the highlight to realign to the modal
+              setTimeout(() => {
+                  window.onboardingTour.refresh();
+              }, 100); 
+          }
+          
+          requestAnimationFrame(() => {
+              $('.modal-backdrop').last().addClass('message-modal-backdrop');
+          });
+      }, { once: true }); 
 
-        modal.show();
+      modal.show();
   
-      // Autofocus input when prompt is shown
       if (options.type === 'prompt') {
         modalEl.addEventListener('shown.bs.modal', () => inputEl.focus(), { once: true });
       }
     });
-  }
+}
   
-  // Simpler wrappers
-  function showAlert(message) {
+// Simpler wrappers
+function showAlert(message) {
     return showModal('Notice', message, { type: 'alert' });
-  }
-  
-  function showConfirm(message) {
+}
+function showConfirm(message) {
     return showModal('Confirm', message, { type: 'confirm' });
-  }
-  
-  function showPrompt(message, defaultValue = '') {
+}
+function showPrompt(message, defaultValue = '') {
     return showModal('Input Required', message, { type: 'prompt', defaultValue });
-  }
+}
 
 // Displays suggested threats and allows users to either add or ignore the 
 // suggestions
@@ -572,7 +577,7 @@ function loadDfd() {
             for (let node of nodes) {
                 node.selected = obj["assets"].includes(node.asset_name);
             }
-            addAssumption(obj.comments);
+            addAssumption(obj.comments, obj.id);
         });
         nodes.forEach(n => {n.selected = false;})  // unselect nodes after loading DFD
     });
@@ -1016,8 +1021,11 @@ function getRadius(node, dx, dy, L) {
     };
   }
 
-  function ticked() {
+function ticked() {
     if (!container) return;
+
+    d3.selectAll(".asset, .asset_label, .link, .dataflow_name, .dataflow_label").style("cursor", "pointer");
+    d3.selectAll("marker").attr("markerUnits", "userSpaceOnUse");
 
     container.selectAll(".link")
       .attr("x1", d => linkEndpoints(d.source, d.target).x1)
@@ -1170,6 +1178,11 @@ function clicked(e) {
         return;
     }
 
+    const step = window.onboardingTour ? window.onboardingTour.currentStep() : -1;
+    if (step === 21) {
+        window.triggerTourNext();
+    }
+
     // Display asset information
     d3.select(this).selectAll(".asset")
         .style("stroke", "#3E8EDE")
@@ -1257,6 +1270,20 @@ function clicked(e) {
         bottom_bar_html += "</div><button id=\"edit_assoc\">Edit Trust Boundaries</button>";
         bottom_bar_html += "<br><select id=\"associate_trust\" class=\"boundary_dropdown\"></select><button id=\"done_associate\">+</button>";
     }
+    bottom_bar_html += "<br><h3>Assumptions</h3>";
+    
+    // Find all assumptions affecting this specific node
+    let node_assumptions = assumptions.filter(a => a.assets.includes(selected_node.asset_name));
+    
+    if (node_assumptions.length > 0) {
+        for (let a of node_assumptions) {
+            // Truncate long assumptions for clean display
+            let display_text = a.text.length > 30 ? "\"" + a.text.substring(0, 28) + "...\"" : a.text;
+            bottom_bar_html += `<span style="cursor: pointer" class="asset_assumption" data-id="${a.id}">${display_text}</span><br><br>`;
+        }
+    } else {
+        bottom_bar_html += "No assumptions added...<br>";
+    }
     
     // places information about the selected node in the bottom bar
     document.getElementById("bottom_bar").innerHTML = bottom_bar_html;
@@ -1318,10 +1345,26 @@ function clicked(e) {
         }
     }
 
+    var assump_links = document.getElementsByClassName("asset_assumption");
+    for (let link of assump_links) {
+        link.onclick = function(e) {
+            e.preventDefault(); // Prevent page jump from href="#"
+            let id = parseInt(this.getAttribute("data-id"));
+            
+            // Switch sidebar view to the assumptions tab
+            if (typeof showSection === 'function') {
+                showSection('assumptions');
+            }
+            
+            // Open the specific assumption's detail view
+            showAssumpDetailPanel(id);
+        };
+    }
+
     // create the options button for the asset
     createAssetOptions();
 
-    if (window.onboardingTour && window.onboardingTour.currentStep() === 3) {
+    if (window.onboardingTour && window.onboardingTour.currentStep() === 8) {
         const selectedCount = nodes.filter(n => n.selected).length;
         console.log("Selected assets:", selectedCount);
     }
@@ -1501,6 +1544,10 @@ function associateBoundary(node) {
 }
 
 function assocThreatAndControl(threat_name, control_name, asset_name, disassociate = false) {
+    const step = window.onboardingTour ? window.onboardingTour.currentStep() : -1;
+    if (step === 23) {
+        window.triggerTourNext();
+    }
     // Associate threat and control in the model
     console.debug('Received threat and control:', threat_name, control_name, asset_name, disassociate);
     const change_type = disassociate ? "disassoc threat" : "assoc threat";
@@ -1526,11 +1573,17 @@ function assocThreatAndControl(threat_name, control_name, asset_name, disassocia
 
 // Displays threat information and allows users to either make changes to the threat
 function displayThreat(node, status, threat) {
+    let step = window.onboardingTour ? window.onboardingTour.currentStep() : -1;
+    if (step === 22) {
+        window.triggerTourNext();
+    }
     const bottom_bar = document.getElementById("bottom_bar");
-    bottom_bar.innerHTML = "<h2>" + threat.threat_title + " ("+ threat.threat_num + ")</h2>" + node.asset_name + " | " + threat.threat_status + " Threat<br>";
+    bottom_bar.innerHTML = "<h2>" + threat.threat_title + " (" + threat.threat_num + ")</h2>" + node.asset_name + " | " + threat.threat_status + " Threat<br>";
+    
     if (threat.threat_description !== "") {
         bottom_bar.innerHTML += "<br><h3>Description</h3>&emsp;&emsp;" + threat.threat_description + "<br>";
     }
+
     switch (status) {
         // if displaying a suggested threat
         case 0:
@@ -1540,7 +1593,6 @@ function displayThreat(node, status, threat) {
                     threat.threat_status = "Known";
                     node.threats[0].splice(node.threats[0].indexOf(threat), 1);
                     node.threats[1].push(threat);
-                    // alert("New threat (" + threat.threat_title + ") added to " + node.asset_name + " successfully!");
                     updateThreatBadges(node);
                     displayThreat(node, 1, threat);
                 }
@@ -1555,6 +1607,7 @@ function displayThreat(node, status, threat) {
                 }
             }, 0);
             break;
+
         // if displaying a mitigated threat
         case 2: 
             bottom_bar.innerHTML += "<br><h3>Controls</h3>";
@@ -1574,58 +1627,189 @@ function displayThreat(node, status, threat) {
                 }
             }, 0);
             break;
+
         // if displaying a known threat
         case 1: 
             bottom_bar.innerHTML += "<br><span>Assign a control: </span><select id=\"assign_control\" disabled><option value=\"invalid\">Add more controls first!</option></select><button id=\"mitigate_threat\" disabled>+</button><br>";
             const dropdown = document.getElementById("assign_control");
             let button = document.getElementById("mitigate_threat");
-            // get all controls that are not already assigned to the threat
-            const controls = [].concat(node.controls[1], node.controls[2]).filter((c) => !threat.controls.includes(c));
-            if (controls.length > 0) {
+            const controlsList = [].concat(node.controls[1], node.controls[2]).filter((c) => !threat.controls.includes(c));
+            
+            if (controlsList.length > 0) {
                 dropdown.disabled = false;
                 button.disabled = false;
                 dropdown.remove(0);
                 dropdown.selectedIndex = 0;
-                dropdown.add(new Option("Select an asset...", -1));
-                for (let i = 0; i < controls.length; i++) {
-                    dropdown.add(new Option(controls[i].control_title, i));
+                dropdown.add(new Option("Select a control...", -1));
+                for (let i = 0; i < controlsList.length; i++) {
+                    dropdown.add(new Option(controlsList[i].control_title, i));
                 }
             }
             setTimeout(function() {
-                button = document.getElementById("mitigate_threat");  // don't remove this
+                button = document.getElementById("mitigate_threat");
                 button.onclick = function () {
                     let selected = getDropdownValue("assign_control");
                     if (selected === -1) {
                         showAlert("Please select a control to assign to " + threat.threat_title + "!");
                         return;
                     }
-                    threat.controls.push(controls[selected]);
-                    if (threat.threat_status === "Known") {  // move threat from Known array to Mitigated array
+                    threat.controls.push(controlsList[selected]);
+                    if (threat.threat_status === "Known") {
                         node.threats[1].splice(node.threats[1].indexOf(threat), 1);
                         threat.threat_status = "Mitigated";
                         node.threats[2].push(threat);
                         updateThreatBadges(node);
                     }
-                    controls[selected].threats.push(threat);
-                    if (controls[selected].control_status === "Known") {  // move control from Known array to Mitigated
-                        node.controls[1].splice(node.controls[1].indexOf(controls[selected]), 1);
-                        controls[selected].control_status = "Mitigated";
-                        node.controls[2].push(controls[selected]);
+                    controlsList[selected].threats.push(threat);
+                    if (controlsList[selected].control_status === "Known") {
+                        node.controls[1].splice(node.controls[1].indexOf(controlsList[selected]), 1);
+                        controlsList[selected].control_status = "Mitigated";
+                        node.controls[2].push(controlsList[selected]);
                     }
                     displayThreat(node, 2, threat);
-                    assocThreatAndControl(threat.threat_title, controls[selected].control_title, node.asset_name);  // update model
+                    assocThreatAndControl(threat.threat_title, controlsList[selected].control_title, node.asset_name);
                 };
             }, 0);
             break;
-        default:
-            console.debug("displayThreat received unknown status (expected 0,1,2): " + status)
     }
-    // Button to return to viewing current node
+
     bottom_bar.innerHTML += "<button class=\"view_button\" id=\"threat_view_asset\">View " + node.asset_name + "</button>";
-    document.getElementById("threat_view_asset").onclick = function () {
-        svg.dispatch('click');
-        svg.selectAll(".node_group").filter(d => d === node).dispatch('click');
+
+    bottom_bar.innerHTML += "<br><button class=\"view_button\" id=\"threat_delete_button\" style=\"color: red; border-color: red;\">Delete Threat</button>";
+
+    setTimeout(function() {
+        document.getElementById("threat_view_asset").onclick = function () {
+            svg.dispatch('click');
+            svg.selectAll(".node_group").filter(d => d === node).dispatch('click');
+        };
+
+        document.getElementById("threat_delete_button").onclick = async function () {
+            const confirmed = await showConfirm("Are you sure you want to permanently delete the threat: '" + threat.threat_title + "'?");
+            if (confirmed) {
+                deleteThreat(threat.threat_title, node);
+                // Return user to the asset view after deletion
+                svg.dispatch('click');
+                svg.selectAll(".node_group").filter(d => d === node).dispatch('click');
+            }
+        };
+    }, 0);
+}
+
+// Displays control information and allows users to either make changes to 
+// the control
+function displayControl(node, status, control) {
+    let step = window.onboardingTour ? window.onboardingTour.currentStep() : -1;
+    if (step === 27) {
+        window.triggerTourNext();
     }
+    var bottom_bar = document.getElementById("bottom_bar");
+    bottom_bar.innerHTML = "<h2>" + control.control_title + "</h2>" + node.asset_name + " | " + control.control_status + " Control<br>";
+    if (control.control_description !== "") {
+        bottom_bar.innerHTML += "<br><h3>Description</h3>&emsp;&emsp;" + control.control_description + "<br>";
+    }
+    switch (status) {
+        // if displaying a suggested control
+        case 0:
+            bottom_bar.innerHTML += "<br><button class=\"view_button\" id=\"add_control\">Add to " + node.asset_name + "</button><br><button class=\"view_button\" id=\"ignore_control\">Ignore Suggestion</button><br>";
+            setTimeout(function() {
+                document.getElementById("add_control").onclick = function() {
+                    control.control_status = "Known";
+                    node.controls[0].splice(node.controls[0].indexOf(control), 1);
+                    node.controls[1].push(control);
+                    displayControl(node, 1, control);
+                }
+                document.getElementById("ignore_control").onclick = function() {
+                    if (!confirm("Ignore suggested control " + control.control_title + "?")) {
+                        return;
+                    }
+                    node.controls[0].splice(node.controls[0].indexOf(control), 1);
+                    svg.dispatch('click');
+                    svg.selectAll(".node_group").filter(d => d === node).dispatch('click');
+                }
+            }, 0);
+            break;
+        // if displaying a mitigated control
+        case 2: 
+            bottom_bar.innerHTML += "<br><h3>Threats</h3>";
+            var display = document.createElement("div");
+            display.id = "threat_display";
+            for (let threat of control.threats) {
+                display.innerText += threat.threat_title;
+                if (threat !== control.threats[control.threats.length - 1]) {
+                    display.innerText += ",  ";
+                }
+            }
+            bottom_bar.appendChild(display);
+            bottom_bar.innerHTML += "<button class=\"view_button\" id=\"edit_threats\">Edit Threats</button><br>";
+            setTimeout(function () {
+                document.getElementById("edit_threats").onclick = function () {
+                    editAssignedThreats(node, control);
+                }
+            }, 0);
+            break;
+        // if displaying a known control
+        case 1: 
+            bottom_bar.innerHTML += "<br><span>Assign a threat: </span><select id=\"assign_control\" disabled><option value=\"invalid\">Add more threats first!</option></select><button id=\"mitigate_threat\" disabled>+</button><br>";
+            var dropdown = document.getElementById("assign_control");
+            var button = document.getElementById("mitigate_threat");
+            var threatsList = [].concat(node.threats[1], node.threats[2]).filter((c) => !control.threats.includes(c));
+            if (threatsList.length > 0) {
+                dropdown.disabled = false;
+                button.disabled = false;
+                dropdown.remove(0);
+                dropdown.selectedIndex = 0;
+                dropdown.add(new Option("Select a threat...", -1));
+                for (let i = 0; i < threatsList.length; i++) {
+                    dropdown.add(new Option(threatsList[i].threat_title, i));
+                }
+            }
+            setTimeout(function() {
+                button = document.getElementById("mitigate_threat");
+                button.onclick = function() {
+                    const selected = getDropdownValue("assign_control");
+                    if (selected === -1) {
+                        showAlert("Please select a threat to be mitigated by " + control.control_title + "!");
+                        return;
+                    }
+                    control.threats.push(threatsList[selected]);
+                    if (control.control_status === "Known") {
+                        node.controls[1].splice(node.controls[1].indexOf(control), 1);
+                        control.control_status = "Mitigated";
+                        node.controls[2].push(control);
+                    }
+                    threatsList[selected].controls.push(control);
+                    if (threatsList[selected].threat_status === "Known") {
+                        node.threats[1].splice(node.threats[1].indexOf(threatsList[selected]), 1);
+                        threatsList[selected].threat_status = "Mitigated";
+                        node.threats[2].push(threatsList[selected]);
+                        updateThreatBadges(node);
+                    }
+                    assocThreatAndControl(threatsList[selected].threat_title, control.control_title, node.asset_name);
+                    displayControl(node, 2, control);
+                };
+            }, 0);
+            break;
+    }
+
+    // View Asset Button
+    bottom_bar.innerHTML += "<button class=\"view_button\" id=\"control_view_asset\">View " + node.asset_name + "</button>";
+    
+    // Delete Control Button
+    bottom_bar.innerHTML += "<br><button class=\"view_button\" id=\"control_delete_button\" style=\"color: red; border-color: red;\">Delete Control</button>";
+
+    setTimeout(function() {
+        document.getElementById("control_view_asset").onclick = function () {
+            svg.dispatch('click');
+            svg.selectAll(".node_group").filter(d => d === node).dispatch('click');
+        };
+
+        document.getElementById("control_delete_button").onclick = async function () {
+            const confirmed = await showConfirm(`Are you sure you want to permanently delete '${control.control_title}'?`);
+            if (confirmed) {
+                deleteControl(control, node);
+            }
+        };
+    }, 0);
 }
 
 // Allow users to unassign controls from threats while viewing a threat
@@ -1687,106 +1871,6 @@ function editAssignedControls(node, threat) {
     }
     done_edit.innerText = "Done";
     document.getElementById("bottom_bar").insertBefore(done_edit, div.nextSibling);
-}
-
-// Displays control information and allows users to either make changes to 
-// the control
-function displayControl(node, status, control) {
-    var bottom_bar = document.getElementById("bottom_bar");
-    bottom_bar.innerHTML = "<h2>" + control.control_title + "</h2>" + node.asset_name + " | " + control.control_status + " Control<br>";
-    if (control.control_description !== "") {
-        bottom_bar.innerHTML += "<br><h3>Description</h3>&emsp;&emsp;" + control.control_description + "<br>";
-    }
-    switch (status) {
-        // if displaying a suggested control
-        case 0:
-            bottom_bar.innerHTML += "<br><button class=\"view_button\" id=\"add_control\">Add to " + node.asset_name + "</button><br><button class=\"view_button\" id=\"ignore_control\">Ignore Suggestion</button><br>";
-            setTimeout(function() {
-                document.getElementById("add_control").onclick = function() {
-                    control.control_status = "Known";
-                    node.controls[0].splice(node.controls[0].indexOf(control), 1);
-                    node.controls[1].push(control);
-                    // alert("New control (" + control.control_title + ") added to " + node.asset_name + " successfully!")
-                    displayControl(node, 1, control);
-                }
-                document.getElementById("ignore_control").onclick = function() {
-                    if (!confirm("Ignore suggested control " + control.control_title + "?")) {
-                        return;
-                    }
-                    node.controls[0].splice(node.controls[0].indexOf(control), 1);
-                    svg.dispatch('click');
-                    svg.selectAll(".node_group").filter(d => d === node).dispatch('click');
-                }
-            }, 0);
-            break;
-        // if displaying a mitigated control
-        case 2: 
-            bottom_bar.innerHTML += "<br><h3>Threats</h3>";
-            var display = document.createElement("div");
-            display.id = "threat_display";
-            for (let threat of control.threats) {
-                display.innerText += threat.threat_title;
-                if (threat !== control.threats[control.threats.length - 1]) {
-                    display.innerText += ",  ";
-                }
-            }
-            bottom_bar.appendChild(display);
-            bottom_bar.innerHTML += "<button class=\"view_button\" id=\"edit_threats\">Edit Threats</button><br>";
-            setTimeout(function () {
-                document.getElementById("edit_threats").onclick = function () {
-                    editAssignedThreats(node, control);
-                }
-            }, 0);
-            break;
-        // if displaying a known control
-        case 1: 
-            bottom_bar.innerHTML += "<br><span>Assign a threat: </span><select id=\"assign_control\" disabled><option value=\"invalid\">Add more threats first!</option></select><button id=\"mitigate_threat\" disabled>+</button><br>";
-            var dropdown = document.getElementById("assign_control");
-            var button = document.getElementById("mitigate_threat");
-            var threats = [].concat(node.threats[1], node.threats[2]).filter((c) => !control.threats.includes(c));
-            if (threats.length > 0) {
-                dropdown.disabled = false;
-                button.disabled = false;
-                dropdown.remove(0);
-                dropdown.selectedIndex = 0;
-                dropdown.add(new Option("Select an asset...", -1));
-                for (let i = 0; i < threats.length; i++) {
-                    dropdown.add(new Option(threats[i].threat_title, i));
-                }
-            }
-            setTimeout(function() {
-                button = document.getElementById("mitigate_threat");
-                button.onclick = function() {
-                    const selected = getDropdownValue("assign_control");
-                    if (selected === -1) {
-                        showAlert("Please select a threat to be mitigated by " + control.control_title + "!");
-                        return;
-                    }
-                    control.threats.push(threats[selected]);
-                    if (control.control_status === "Known") {
-                        node.controls[1].splice(node.controls[1].indexOf(control), 1);
-                        control.control_status = "Mitigated";
-                        node.controls[2].push(control);
-                    }
-                    threats[selected].controls.push(control);
-                    if (threats[selected].threat_status === "Known") {
-                        node.threats[1].splice(node.threats[1].indexOf(threats[selected]), 1);
-                        threats[selected].threat_status = "Mitigated";
-                        node.threats[2].push(threats[selected]);
-                        updateThreatBadges(node);
-                    }
-                    assocThreatAndControl(threats[selected].threat_title, control.control_title, node.asset_name);
-                    displayControl(node, 2, control);
-                };
-            }, 0);
-            break;
-    }
-    // Button to return to viewing current node
-    bottom_bar.innerHTML += "<button class=\"view_button\" id=\"control_view_asset\">View " + node.asset_name + "</button>";
-    document.getElementById("control_view_asset").onclick = function () {
-        svg.dispatch('click');
-        svg.selectAll(".node_group").filter(d => d === node).dispatch('click');
-    }
 }
 
 // Allow users to unassign threats from controls while viewing a control
@@ -1939,501 +2023,127 @@ function createMenuItem(text, onClick, id = null, extraChild = null) {
 
 // Create the options dropdown button when viewing an asset
 function createAssetOptions() {
-    var assetID = document.getElementById("options").children[0].value;
-    var options = document.getElementById("options").children[0].children[1];
-    var currNode = nodes[nodeIndex(assetID)];
+    const assetID = document.getElementById("options").children[0].value;
+    const options = document.getElementById("options").children[0].children[1];
+    const currNode = nodes[nodeIndex(assetID)];
 
-    // creating the button to add new dataflows to the current asset
-    options.appendChild(
-        createMenuItem(
-            "Create dataflow to...",
-            () => {
-                if (nodes.length < 2) {
-                    showAlert("Add more assets first!");
-                }
-            },
-            "add_dataflow",
-            newDataflowList(assetID)
-        )
-    );
+    // View Menu Items
+    options.appendChild(createMenuItem("Create dataflow to...", () => {
+        if (nodes.length < 2) showAlert("Add more assets first!");
+    }, "add_dataflow", newDataflowList(assetID)));
 
-    // creating the button to view workflows connected to current asset
-    options.appendChild(
-        createMenuItem(
-            "View dataflow...", 
-            () => {
-                var has_dataflows = false;
-                for (let dataflow of links) {
-                    if (dataflow.source === currNode || dataflow.target === currNode) {
-                        has_dataflows = true;
-                    }
-                }
-                if (!has_dataflows) {
-                    showAlert("There are no dataflows with this asset!");
-                }
-            }, 
-            "view_dataflows",
-            createDataflowList(currNode)
-        )
-    );
-
-    // creating the button to view workflows connected to current asset
-    options.appendChild(
-        createMenuItem(
-            "View workflow...", 
-            () => {
-                var has_workflows = false;
-                for (let components of Object.values(workflows)) {
-                    if (components.includes(currNode)) {
-                        has_workflows = true;
-                    }
-                }
-                if (!has_workflows) {
-                    showAlert("There are no workflows with this asset!");
-                }
-            }, 
-            "view_workflow",
-            createWorkflowList(currNode)
-        )
-    );
-
-    // creating the button to view trust boundaries with current asset
-    options.appendChild(
-        createMenuItem(
-            "View trust boundary...", 
-            () => {
-                let has_boundaries = false;
-                for (let assets of Object.values(boundaries)) {
-                    if (assets.includes(currNode)) {
-                        has_boundaries = true;
-                    }
-                }
-                if (!has_boundaries) {
-                    showAlert("There are no trust boundaries with this asset!");
-                }
-            }, 
-            "view_boundary",
-            createBoundaryList(currNode)
-        )
-    );
-
-    // creating nested delete dropdown menu
-    listItem = document.createElement('li');
-    var delete_button = document.createElement('a')
-    delete_button.href = "#";
-    delete_button.innerHTML = "Delete...";
-    listItem.appendChild(delete_button);
-    var delete_list = document.createElement('ul');
-
-    // creating button for deleting threats
-    var threat_li = document.createElement('li');
-    var remove_threat = document.createElement('a');
-    remove_threat.href = "#";
-    remove_threat.innerHTML = "Threat...";
-    remove_threat.onclick = function() {
-        var threats = currNode.threats[1].concat(currNode.threats[2]);
-        if (threats.length === 0) {
-            showAlert("There are no threats added to this asset!");
-            return;
+    options.appendChild(createMenuItem("View dataflow...", () => {
+        if (!links.some(l => l.source === currNode || l.target === currNode)) {
+            showAlert("There are no dataflows with this asset!");
         }
-        var ul = document.getElementById("options");
-        ul.style.display = "none";
-        
-        // creating the checklist to select threats to delete
-        var new_ul = document.createElement("ul");
-        new_ul.style.background = "#f3f3f3";
-        new_ul.style.borderRadius = "20px";
-        new_ul.style.padding = "10px";
-        new_ul.style.width = "fit-content";
-        new_ul.style.float = "right";
-        var new_div = document.createElement("div");
-        new_div.innerHTML = "Select threats to be deleted:";
-        new_ul.appendChild(new_div);
-        for (let threat of threats) {
-            let new_li = document.createElement("li");
-            let new_label = document.createElement("label");
-            new_label.innerHTML = threat.threat_title + " ("+ threat.threat_num + ")";
-            let new_input = document.createElement("input");
-            new_input.classList.add("flowChecks");
-            new_input.type = "checkbox";
-            new_label.appendChild(new_input);
-            new_li.appendChild(new_label);
-            new_ul.appendChild(new_li);
-        }
-        var submit = document.createElement("button");
-        submit.innerHTML = "Done"
-        var bar = document.getElementById("bottom_bar");
-        submit.onclick = function () {
-            var known = currNode.threats[1];
-            var mitigated = currNode.threats[2];
-            const flow_checks = document.getElementsByClassName("flowChecks");
-            for (let i = flow_checks.length - 1; i >= 0; i--) {
-                if (flow_checks[i].checked) {
-                    if (threats[i].threat_status === "Known") {
-                        known.splice(known.indexOf(threats[i]), 1);
-                    }
-                    else if (threats[i].threat_status === "Mitigated") {
-                        mitigated.splice(mitigated.indexOf(threats[i]), 1);
-                        // checking mitigated controls with deleted threat
-                        var controls = currNode.controls[2];
-                        for (let j = controls.length - 1; j >= 0; j--) {
-                            if (controls[j].threats.includes(threats[i])) {
-                                controls[j].threats.splice(controls[j].threats.indexOf(threats[i]), 1);
-                                if (controls[j].threats.length === 0) {
-                                    controls[j].control_status = "Known";
-                                    currNode.controls[1].push(controls[j]);
-                                    controls.splice(j, 1);
-                                }
-                            }
-                        }
-                    }
-                    deleteThreat(threats[i].threat_title);
-                }
-            }
-            currNode.threats[1] = known;
-            currNode.threats[2] = mitigated;
-            let options = document.getElementById("options");
-            options.style.display = "block"; 
-            svg.selectAll(".node_group").filter(d => d === currNode).dispatch('click').dispatch('click');
-            updateThreatBadges(currNode);
-        }
-        new_ul.appendChild(document.createElement("br"));
-        new_ul.appendChild(submit);
-        new_ul.style.display = "block";
-        bar.insertBefore(new_ul, bar.children[0]);
-    }
-    threat_li.appendChild(remove_threat);
-    delete_list.appendChild(threat_li);
-    // END deleting threat code
+    }, "view_dataflows", createDataflowList(currNode)));
 
-    // creating button for deleting controls
-    var control_li = document.createElement('li');
-    var remove_control = document.createElement('a');
-    remove_control.href = "#";
-    remove_control.innerHTML = "Control...";
-    remove_control.onclick = function() {
-        var controls = currNode.controls[1].concat(currNode.controls[2]);
-        if (controls.length === 0) {
-            showAlert("There are no controls added to this asset!");
-            return;
+    options.appendChild(createMenuItem("View workflow...", () => {
+        if (!Object.values(workflows).some(w => w.includes(currNode))) {
+            showAlert("There are no workflows with this asset!");
         }
-        var ul = document.getElementById("options");
-        ul.style.display = "none";
-        
-        // creating checklist to select controls to delete
-        var new_ul = document.createElement("ul");
-        new_ul.style.background = "#f3f3f3";
-        new_ul.style.borderRadius = "20px";
-        new_ul.style.padding = "10px";
-        new_ul.style.width = "fit-content";
-        new_ul.style.float = "right";
-        var new_div = document.createElement("div");
-        new_div.innerHTML = "Select controls to be deleted:";
-        new_ul.appendChild(new_div);
-        for (let control of controls) {
-            let new_li = document.createElement("li");
-            let new_label = document.createElement("label");
-            new_label.innerHTML = control.control_title;
-            let new_input = document.createElement("input");
-            new_input.classList.add("flowChecks");
-            new_input.type = "checkbox";
-            new_label.appendChild(new_input);
-            new_li.appendChild(new_label);
-            new_ul.appendChild(new_li);
-        }
-        var submit = document.createElement("button");
-        submit.innerHTML = "Done"
-        var bar = document.getElementById("bottom_bar");
-        // delete the control
-        submit.onclick = function () {
-            let known = currNode.controls[1];
-            let mitigated = currNode.controls[2];
-            const flow_checks = document.getElementsByClassName("flowChecks");
-            for (let i = flow_checks.length - 1; i >= 0; i--) {
-                if (flow_checks[i].checked) {
-                    if (controls[i].control_status === "Known") {  // remove from known controls
-                        known.splice(known.indexOf(controls[i]), 1);
-                    }
-                    else if (controls[i].control_status === "Mitigated") {  // mark associated threats as Known if they have no other controls
-                        mitigated.splice(mitigated.indexOf(controls[i]), 1);
-                        // checking mitigated threats with deleted control
-                        var threats = currNode.threats[2];
-                        for (let j = threats.length - 1; j >= 0; j--) {
-                            if (threats[j].controls.includes(controls[i])) {
-                                threats[j].controls.splice(threats[j].controls.indexOf(controls[i]), 1);
-                                if (threats[j].controls.length === 0) {
-                                    threats[j].threat_status = "Known";
-                                    currNode.threats[1].push(threats[j]);
-                                    threats.splice(j, 1);
-                                }
-                            }
-                        }
-                    }
-                    $.ajax({  // update model
-                        type: "POST",
-                        url: deleteControlUrl,
-                        headers: {
-                            "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value,
-                        },
-                        data: {name: controls[i].control_title, project_name: projectName},
-                        data_type: "html",
-                        success: function(result){
-                            if (result !== 200) {showAlert("Error deleting control. Received: " + result);}
-                        },
-                    });
-                }
-            }
-            currNode.controls[1] = known;
-            currNode.controls[2] = mitigated;
-            let options = document.getElementById("options")
-            options.style.display = "block"; 
-            svg.selectAll(".node_group").filter(d => d === currNode).dispatch('click').dispatch('click');
-            updateThreatBadges(currNode);
-        }
-        new_ul.appendChild(document.createElement("br"));
-        new_ul.appendChild(submit);
-        new_ul.style.display = "block";
-        bar.insertBefore(new_ul, bar.children[0]);
-    }
-    control_li.appendChild(remove_control);
-    delete_list.appendChild(control_li);
+    }, "view_workflow", createWorkflowList(currNode)));
 
-    // creating button for deleting dataflows
+    options.appendChild(createMenuItem("View trust boundary...", () => {
+        if (!Object.values(boundaries).some(b => b.includes(currNode))) {
+            showAlert("There are no trust boundaries with this asset!");
+        }
+    }, "view_boundary", createBoundaryList(currNode)));
+
+    // Nested Delete Menu
+    const deleteMainLi = document.createElement('li');
+    const deleteAnchor = document.createElement('a');
+    deleteAnchor.href = "#";
+    deleteAnchor.innerHTML = "Delete...";
+    deleteMainLi.appendChild(deleteAnchor);
+
+    const deleteSubUl = document.createElement('ul');
+
+    // Delete Threats
+    deleteSubUl.appendChild(createMenuItem("Threat...", () => {
+        const threatList = currNode.threats[1].concat(currNode.threats[2]);
+        if (threatList.length === 0) return showAlert("There are no threats on this asset!");
+        createDeleteChecklist(threatList, "threats", (t) => deleteThreat(t.threat_title, currNode), currNode);
+    }));
+
+    // Delete Controls
+    deleteSubUl.appendChild(createMenuItem("Control...", () => {
+        const controlList = currNode.controls[1].concat(currNode.controls[2]);
+        if (controlList.length === 0) return showAlert("There are no controls on this asset!");
+        createDeleteChecklist(controlList, "controls", (c) => deleteControl(c, currNode), currNode);
+    }));
+
+    // Dataflows and Asset (Experimental/Non-Experiment Mode)
     if (!experimentMode) {
-        const flow_li = document.createElement('li');
-    var remove_flow = document.createElement('a');
-    remove_flow.href = "#";
-    remove_flow.innerHTML = "Dataflow...";
-    remove_flow.onclick = function() {
-        var flows = [];
-        for (let i = 0; i < links.length; i++) {
-            if (links[i].source.id === assetID || links[i].target.id === assetID) {
-                flows.push(i);
-            }
-        }
-        if (flows.length === 0) {
-            showAlert("There are no dataflows connected to this asset!");
-            return;
-        }
-        var ul = document.getElementById("options");
-        ul.style.display = "none";
-        var new_ul = document.createElement("ul");
-        new_ul.style.background = "#f3f3f3";
-        new_ul.style.borderRadius = "20px";
-        new_ul.style.padding = "10px";
-        new_ul.style.width = "fit-content";
-        new_ul.style.float = "right";
-        var new_div = document.createElement("div");
-        new_div.innerHTML = "Select data flows to be deleted:";
-        new_ul.appendChild(new_div);
-        for (let flow of flows) {
-            let new_li = document.createElement("li");
-            let new_label = document.createElement("label");
-            new_label.innerHTML = links[flow].source.asset_name + " &#8594 " + links[flow].target.asset_name;
-            let new_input = document.createElement("input");
-            new_input.classList.add("flowChecks");
-            new_input.type = "checkbox";
-            new_label.appendChild(new_input);
-            new_li.appendChild(new_label);
-            new_ul.appendChild(new_li);
-        }
-        var submit = document.createElement("button");
-        submit.innerHTML = "Done"
-        var bar = document.getElementById("bottom_bar");
-        submit.onclick = function () {
-            if (!confirm("This will delete all workflows that include the selected dataflows. Continue?")) {
-                return;
-            }
-            var flow_checks = document.getElementsByClassName("flowChecks");
+        // Dataflow
+        deleteSubUl.appendChild(createMenuItem("Dataflow...", () => {
+            const flows = [];
+            links.forEach((link, i) => {
+                if (link.source.id === assetID || link.target.id === assetID) flows.push(i);
+            });
+            if (flows.length === 0) return showAlert("No dataflows connected to this asset!");
+            
+            
+            setupDataflowDeleteChecklist(flows, assetID, currNode);
+        }));
 
-            // Find and remove connected workflows
-            var removed_workflows = false;
-            for (let i = 0; i < flows.length; i++) {
-                if (flow_checks[i].checked) {
-                    var source = links[flows[i]].source;
-                    var target = links[flows[i]].target;
-                    for (let key of Object.keys(workflows)) {
-                        var components = workflows[key];
-                        if (components.includes(source) && components.indexOf(source) === components.indexOf(target) - 1) {
-                            removed_workflows = true;
-                            delete workflows[key];
-                        }
-                    }
-                }
+        // Asset
+        deleteSubUl.appendChild(createMenuItem("Asset", async () => {
+            if (await showConfirm("This will delete all dataflows connected to this asset. Continue?")) {
+                handleAssetDeletion(assetID, currNode);
             }
-            if (removed_workflows) {
-                document.getElementById("view_workflow").replaceChild(createWorkflowList(currNode), document.getElementById("workflow_button"));
-            }
-
-            // Remove selected dataflows
-            for (let i = flows.length - 1; i >= 0; i--) {
-                if (flow_checks[i].checked) {
-                    links.splice(flows[i], 1);
-                }
-            }
-            var link_update = svg.selectAll(".link_group").data(links, function(d) { return d.source.id + "-" + d.target.id; });
-            link_update.exit().remove();
-
-            let options = document.getElementById("options")
-            options.style.display = "block";
-            bar.removeChild(bar.children[0]);
-        }
-        new_ul.appendChild(document.createElement("br"));
-        new_ul.appendChild(submit);
-        new_ul.style.display = "block";
-        bar.insertBefore(new_ul, bar.children[0]);
-    }
-    flow_li.appendChild(remove_flow);
-    delete_list.appendChild(flow_li);
+        }));
     }
 
-    // creating button to delete current asset
-    if (!experimentMode) {
-        var asset_li = document.createElement('li');
-    var del = document.createElement('a');
-    del.href = "#";
-    del.innerHTML = "Asset";
-    del.onclick = async function() {
-        if (await showConfirm("This will delete all dataflows connected to this asset. Continue?")) {
-            // return;
-        // }
-
-        // checking all workflows connected to this asset
-        var frontWorkflows = [];
-        var backWorkflows = [];
-        var delWorkflows = [];
-        for (let key of Object.keys(workflows)) {
-            if (workflows[key].includes(currNode)) {
-                var components = workflows[key];
-                if (components.length > 1 && components[0] === currNode) {
-                    frontWorkflows.push(key);
-                }
-                else if (components.length > 1 && components[components.length - 1] === currNode) {
-                    backWorkflows.push(key);
-                }
-                else {
-                    delWorkflows.push(key);
-                }
-            }
-        }
-        if (frontWorkflows.length !== 0 && !confirm("This will delete " + currNode.asset_name + " from the front of the following workflows: " + frontWorkflows.toString() + "\nContinue?")) {
-            return;
-        }
-
-        if (backWorkflows.length !== 0 && !confirm("This will delete " + currNode.asset_name + " from the back of the following workflows: " + backWorkflows.toString() + "\nContinue?")) {
-            return;
-        }
-
-        if (delWorkflows.length !== 0 && !confirm("Since workflows cannot have breaks, this will delete the following workflows: " + delWorkflows.toString() + "\nContinue?")) {
-            return;
-        }
-
-        // checking all trust boundaries that include this asset
-        var editBoundaries = [];
-        var delBoundaries = [];
-        for (let boundary of Object.keys(boundaries)) {
-            if (boundaries[boundary].includes(currNode)) {
-                let assets = boundaries[boundary];
-                var removedi = assets.indexOf(currNode);
-                assets.splice(removedi, 1);
-                if (checkConnected(assets)) {
-                    editBoundaries.push(boundary);
-                }
-                else {
-                    delBoundaries.push(boundary);
-                }
-                assets.splice(removedi, 0, currNode);
-            }
-        }
-
-        if (editBoundaries.length !== 0 && !confirm("This will delete " + currNode.asset_name + " from the following trust boundaries: " + editBoundaries.toString() + "\nContinue?")) {
-            return;
-        }
-
-        if (delBoundaries.length !== 0 && !confirm("Since trust boundaries must be connected, this will delete the following boundaries: " + delBoundaries.toString() + "\nContinue?")) {
-            return;
-        }
-
-        for (let flow of frontWorkflows) {
-            let components = workflows[flow];
-            components.shift();
-        }
-        for (let flow of backWorkflows) {
-            let components = workflows[flow];
-            components.pop();
-        }
-        for (let flow of delWorkflows) {
-            // let components = workflows[flow];
-            delete workflows[flow];
-        }
-
-        for (let bound of editBoundaries) {
-            let assets = boundaries[bound];
-            assets.splice(assets.indexOf(currNode), 1);
-            svg.selectAll(".link_group").filter(d => (d.source === currNode && !assets.includes(d.target)) || (d.target === currNode && !assets.includes(d.source))).selectAll(".boundary").filter(function() { return d3.select(this).attr("boundaryName") == bound; }).remove();
-
-            var flow = d3.selectAll(".link_group").filter(d => (d.source === currNode && assets.includes(d.target)) || (d.target === currNode && assets.includes(d.source)));
-            var jitter;
-            if (d3.selectAll(".boundary").filter(function() {return d3.select(this).attr("boundaryName") === bound;}).empty()) {
-                jitter = (Math.random() * 0.3) + 0.1;
-            }
-            else {
-                jitter = d3.selectAll(".boundary").filter(function() {
-                    return d3.select(this).attr("boundaryName") === bound;
-                }).attr("jitter");
-            }
-            appendTrustPath(flow, bound, jitter);
-        }
-
-        for (let bound of delBoundaries) {
-            deleteBoundary(bound);
-        }
-        // this is where asset is deleted
-        let node_index = nodeIndex(assetID)
-        console.debug("Asset type, node index, assetID:")
-        console.debug(nodes[node_index])
-        $.ajax({
-            type: "POST",
-            url: deleteAssetUrl,
-            headers: {
-                "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value,
-            },
-            data: {
-                index: node_index,
-                name: nodes[node_index].asset_name,
-                type: nodes[node_index].asset_type,
-                project_name: projectName,
-            },
-            dataType: "html",
-        });
-
-        nodes.splice(nodeIndex(assetID), 1);
-        svg.selectAll(".node_group").each(function (d) {
-            if (assetID === d.id) {
-                d3.select(this).remove();
-            }
-        });
-        updateAssetDropdowns();
-
-        // removing all dataflows connected to this asset
-        for (let i = 0; i < links.length; i++) {
-            if (links[i].source.id === assetID || links[i].target.id === assetID) {
-                links.splice(i, 1);
-                i--;
-            }
-        }
-        var link_update = svg.selectAll(".link_group").data(links, function(d) { return d.source.id + "-" + d.target.id; });
-        link_update.exit().remove();
-        resetBottomBar();
-    }
-    }
-    asset_li.appendChild(del);
-    delete_list.appendChild(asset_li);
-    }
-    listItem.appendChild(delete_list);
-    options.appendChild(listItem);
+    deleteMainLi.appendChild(deleteSubUl);
+    options.appendChild(deleteMainLi);
 
     setupOptionsMenuToggles();
+}
+
+// To select and delete multiple items.
+ function createDeleteChecklist(items, labelText, deleteFn, currNode) {
+    const optionsMenu = document.getElementById("options");
+    optionsMenu.style.display = "none"; // Hide main options while deleting
+    
+    const checklistWrap = document.createElement("ul");
+    checklistWrap.style.cssText = "background: #f3f3f3; border-radius: 20px; padding: 10px; width: fit-content; float: right;";
+    checklistWrap.innerHTML = `<div>Select ${labelText} to be deleted:</div>`;
+    
+    items.forEach((item, index) => {
+        const title = item.threat_title || item.control_title;
+        // Handle threats having IDs/Numbers while controls might just have titles
+        const display = item.threat_num ? `${title} (${item.threat_num})` : title;
+        
+        const li = document.createElement("li");
+        li.innerHTML = `<label><input type="checkbox" class="delChecks" value="${index}"> ${display}</label>`;
+        checklistWrap.appendChild(li);
+    });
+
+    const submitBtn = document.createElement("button");
+    submitBtn.innerHTML = "Done";
+    submitBtn.onclick = async () => {
+        const checkedInputs = document.querySelectorAll(".delChecks:checked");
+        
+        for (let input of checkedInputs) {
+            const itemToDelete = items[input.value];
+            // This calls either deleteThreat() or deleteControl() depending on what was passed
+            await deleteFn(itemToDelete, currNode);
+        }
+
+        optionsMenu.style.display = "block"; // Show options again
+        checklistWrap.remove(); // Remove the checklist UI
+        
+        // Refresh the sidebar view
+        svg.selectAll(".node_group").filter(d => d === currNode).dispatch('click').dispatch('click');
+        updateThreatBadges(currNode);
+    };
+
+    checklistWrap.appendChild(document.createElement("br"));
+    checklistWrap.appendChild(submitBtn);
+    
+    const bar = document.getElementById("bottom_bar");
+    bar.insertBefore(checklistWrap, bar.firstChild);
 }
 
 // Helper function to create/update list of possible new dataflows in   
@@ -2499,12 +2209,14 @@ function viewDataflow(dataflow) {
     // Reset all links to default
     d3.selectAll(".link")
         .style("stroke", "black")
+        .style("stroke-width", "2px", "important")
         .attr("marker-end", "url(#arrow)");
 
     // Find and highlight the specific dataflow being viewed
     d3.selectAll(".link")
         .filter(d => d.source === dataflow.source && d.target === dataflow.target)
         .style("stroke", "#3E8EDE")
+        .style("stroke-width", "6px", "important")
         .attr("marker-end", "url(#arrow-highlight)");
 
     const dataflow_name = dataflow.name === "" ? "[Unnamed]" : dataflow.name;
@@ -2519,6 +2231,7 @@ function viewDataflow(dataflow) {
     bottom_bar_html += "<br> <button type=\"button\" class=\"view_button\" id=\"unselect_button\">Unselect Dataflow</button>";
     bottom_bar_html += "<br> <button type=\"button\" class=\"view_button\" id=\"remove_dataflow\">Remove Dataflow</button>";
     document.getElementById("bottom_bar").innerHTML = bottom_bar_html;
+    
     document.getElementById("edit_button").onclick = async function () {
         const old_name = dataflow.name;
         dataflow.name = await showPrompt("Rename this dataflow to:", dataflow.name);
@@ -2566,56 +2279,58 @@ function viewDataflow(dataflow) {
         });
         viewDataflow(dataflow);
     };
+    
     var unselect_button = document.getElementById("unselect_button");
     unselect_button.onclick = function () {
         // Reset all links to default
         d3.selectAll(".link")
             .style("stroke", "black")
+            .style("stroke-width", "2px", "important")
             .attr("marker-end", "url(#arrow)");
         resetBottomBar();
     }
+    
     var remove_button = document.getElementById("remove_dataflow");
     remove_button.onclick = async function() {
         if (await showConfirm("This will delete all workflows that include the selected dataflow. Continue?")) {
-            // return;
-        // }
-        // Removes all workflows that involve this dataflow
-        for (let key of Object.keys(workflows)) {
-            var components = workflows[key];
-            if (components.includes(dataflow.source) && components.indexOf(dataflow.source) === components.indexOf(dataflow.target) - 1) {
-                delete workflows[key];
+            // Removes all workflows that involve this dataflow
+            for (let key of Object.keys(workflows)) {
+                var components = workflows[key];
+                if (components.includes(dataflow.source) && components.indexOf(dataflow.source) === components.indexOf(dataflow.target) - 1) {
+                    delete workflows[key];
+                }
             }
-        }
-        // Remove dataflow
-        links.splice(links.indexOf(dataflow), 1);
-        var link_update = svg.selectAll(".link_group").data(links, function(d) { return d.source.id + "-" + d.target.id; });
-        link_update.exit().remove();
-        $.ajax({  // update model
-            type: "POST",
-            url: deleteAssetUrl,
-            headers: {
-                "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value,
-            },
-            data: {
-                name: dataflow.name,
-                source: dataflow.source.asset_name,
-                dest: dataflow.target.asset_name,
-                type: "Dataflow",
-                project_name: projectName,
-            },
-            data_type: "html",
-            success: function(result){
-                if (result !== 200) {showAlert("Error deleting control. Received: " + result);}
-            },
-        });
+            // Remove dataflow
+            links.splice(links.indexOf(dataflow), 1);
+            var link_update = svg.selectAll(".link_group").data(links, function(d) { return d.source.id + "-" + d.target.id; });
+            link_update.exit().remove();
+            $.ajax({  
+                type: "POST",
+                url: deleteAssetUrl,
+                headers: {
+                    "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value,
+                },
+                data: {
+                    name: dataflow.name,
+                    source: dataflow.source.asset_name,
+                    dest: dataflow.target.asset_name,
+                    type: "Dataflow",
+                    project_name: projectName,
+                },
+                data_type: "html",
+                success: function(result){
+                    if (result !== 200) {showAlert("Error deleting control. Received: " + result);}
+                },
+            });
 
-        // Reset all links to default
-        d3.selectAll(".link")
-            .style("stroke", "black")
-            .attr("marker-end", "url(#arrow)");
-        resetBottomBar();
+            // Reset all links to default
+            d3.selectAll(".link")
+                .style("stroke", "black")
+                .style("stroke-width", "2px", "important")
+                .attr("marker-end", "url(#arrow)");
+            resetBottomBar();
+        }
     }
-}
 }
 
 // Helper function to create/update list of workflows to view in options 
@@ -3004,18 +2719,20 @@ function loadDataFlow(source, target, name) {
         .insert("line", ".node") // "insert a line into the SVG right before each .node in the SVG"
         .attr("class", "link")
         .attr("stroke", "black")
+        .style("stroke-width", "2px", "important")
         .attr("marker-end", "url(#arrow)")
         .attr("markerWidth", 300)
         .on("click", function(event, d) {
             // Reset all links to default state
             d3.selectAll(".link")
                 .style("stroke", "black")
-                .style("stroke-width", "1")
+                .style("stroke-width", "2px", "important")
                 .attr("marker-end", "url(#arrow)");
 
             // Highlight only the clicked link
             d3.select(this)
                 .style("stroke", "#3E8EDE")
+                .style("stroke-width", "6px", "important")
                 .attr("marker-end", "url(#arrow-highlight)");
             viewDataflow(link);
         })
@@ -3038,12 +2755,13 @@ function loadDataFlow(source, target, name) {
                 // Reset all links to default state
                 d3.selectAll(".link")
                     .style("stroke", "black")
-                    .style("stroke-width", "1")
+                    .style("stroke-width", "2px", "important")
                     .attr("marker-end", "url(#arrow)");
 
                 // Highlight only the clicked link
                 d3.select(this)
                     .style("stroke", "#3E8EDE")
+                    .style("stroke-width", "6px", "important")
                     .attr("marker-end", "url(#arrow-highlight)");
                 viewDataflow(link);
         });
@@ -3087,8 +2805,7 @@ async function addDataFlow() {
         return;
     }
 
-    // Prevent dataflows from being added that point
-    // from an object to itself
+    // Prevent dataflows from being added that point from an object to itself
     if (source === target) {
         showAlert("Cannot add a dataflow with identical source and target!");
         // TODO: highlight the dropdowns in red or something
@@ -3106,8 +2823,6 @@ async function addDataFlow() {
         }
     }
 
-    // Prompt user for dataflow name...
-    // var dataflow_name = window.prompt("(Optional) Name this dataflow:", "");
     const dataflow_name = await showPrompt("(Optional) Name this dataflow:", "");
     // Return from function if user cancels
     if (dataflow_name === null || dataflow_name === false)
@@ -3146,7 +2861,6 @@ async function addDataFlow() {
     });
 
     if (nodes[source].asset_type === "Actor" || nodes[target].asset_type === "Actor") {
-        // link.protocol = window.prompt("What is the protocol?", "Not Specified");
         link.protocol = await showPrompt("What is the protocol?", "Not Specified");
     }
 
@@ -3165,21 +2879,23 @@ async function addDataFlow() {
 
     // Append a line to that group...
     link_group
-        .insert("line", ".node") // "insert a line into the SVG right before each .node in the SVG"
+        .insert("line", ".node") 
         .attr("class", "link")
         .attr("stroke", "black")
+        .style("stroke-width", "2px", "important")
         .attr("marker-end", "url(#arrow)")
         .attr("markerWidth", 300)
         .on("click", function(event, d) {
             // Reset all links to default state
             d3.selectAll(".link")
                 .style("stroke", "black")
-                .style("stroke-width", "1")
+                .style("stroke-width", "2px", "important")
                 .attr("marker-end", "url(#arrow)");
 
             // Highlight only the clicked link
             d3.select(this)
                 .style("stroke", "#3E8EDE")
+                .style("stroke-width", "6px", "important")
                 .attr("marker-end", "url(#arrow-highlight)");
             viewDataflow(link);
         })
@@ -3195,6 +2911,7 @@ async function addDataFlow() {
             .attr("text-anchor", "middle")
             .attr("alignment-baseline", "central")
             .attr("fill", "black")
+            .style("cursor", "pointer")
             .attr("marker-end", "url(#arrow)")
             .style("font-size", "16pt")
             .text(dataflow_name)
@@ -3202,12 +2919,14 @@ async function addDataFlow() {
                 // Reset all links to default state
                 d3.selectAll(".link")
                     .style("stroke", "black")
-                    .style("stroke-width", "1")
+                    .style("stroke-width", "2px", "important")
                     .attr("marker-end", "url(#arrow)");
 
-                // Highlight only the clicked link
-                d3.select(this)
+                // Highlight the clicked link
+                d3.selectAll(".link")
+                    .filter(l => l === link)
                     .style("stroke", "#3E8EDE")
+                    .style("stroke-width", "6px", "important")
                     .attr("marker-end", "url(#arrow-highlight)");
                 viewDataflow(link);
         });
@@ -3969,27 +3688,48 @@ async function createTrustBoundary() {
 
     // Prompt user for trust boundary name...
     var boundary_name = await showPrompt("(Optional) Name this trust boundary:", "");
-    // Prevent duplicate names
-    while (Object.keys(boundaries).includes(boundary_name)) {
-        boundary_name = await showPrompt(boundary_name + " already exists. Choose a different name:", "");
+    
+    // If user clicks OK without typing, treat it as an empty string
+    if (boundary_name === true) {
+        boundary_name = "";
+    } else if (typeof boundary_name === 'string') {
+        boundary_name = boundary_name.trim(); // Clean up accidental spaces
     }
 
-    // Return from function if user cancels
+    // Return from function if user cancels (usually returns null or false)
     if (boundary_name === null || boundary_name === false) {
         cancelAddingBoundary();
         return;
     }
+
+    // Checks if the name exists as a boundary OR as a regular asset
+    const nameExists = (name) => {
+        return Object.keys(boundaries).includes(name) || nodes.some(n => n.asset_name === name);
+    };
+
+    // Prevent duplicate names across all entities if they typed something
+    while (boundary_name !== "" && nameExists(boundary_name)) {
+        boundary_name = await showPrompt("'" + boundary_name + "' already exists. Choose a different name:", "");
+        
+        if (boundary_name === true) boundary_name = "";
+        if (typeof boundary_name === 'string') boundary_name = boundary_name.trim();
+        if (boundary_name === null || boundary_name === false) {
+            cancelAddingBoundary();
+            return;
+        }
+    }
     
     // Set default boundary name if user does not name it 
-    let length = Object.keys(boundaries).length + 1;
     if (boundary_name === "") {
+        let length = Object.keys(boundaries).length + 1;
         boundary_name = "Trust Boundary " + length;
+        // Keep incrementing until we find an available number
+        while (nameExists(boundary_name)) {
+            length++;
+            boundary_name = "Trust Boundary " + length;
+        }
     }
-    // Prevent duplicate names
-    while (Object.keys(boundaries).includes(boundary_name)) {
-        length++;
-        boundary_name = "Trust Boundary " + length;
-    }
+    
     boundaries[boundary_name] = assets;
 
     var assocs = assets.filter(d => d.asset_type === "Actor" || d.asset_type === "External Entity");
@@ -4007,7 +3747,7 @@ async function createTrustBoundary() {
     if (document.getElementById("boundary_dropdown")) {
         resetBottomBar();
     }
-    console.debug(asset_names);
+    
     $.ajax({
         type: "POST",
         url: addEntityUrl,
@@ -4017,8 +3757,6 @@ async function createTrustBoundary() {
         data: {
             name: boundary_name,
             type: "Boundary",
-            // actor_type: document.getElementById("actor_type").value,
-            // actor_access: document.getElementById("actor_access").value,
             actor_name: "",
             actor_type: "",
             entity_names: asset_names,
@@ -4027,8 +3765,20 @@ async function createTrustBoundary() {
         },
         dataType: "html",
         success: function(result){
-            showAlert("Success");
+            showAlert("Trust Boundary added successfully!");
         },
+        error: function(xhr) {
+            if (xhr.status === 409) {
+                showAlert("Error: A boundary with the name '" + boundary_name + "' already exists in the database. Please reload the page and try a different name.");
+                // Rollback local UI changes if the server rejected it
+                delete boundaries[boundary_name];
+                d3.selectAll(".boundary").filter(function() { 
+                    return d3.select(this).attr("boundaryName") === boundary_name; 
+                }).remove();
+            } else {
+                showAlert("Error adding trust boundary: " + xhr.statusText);
+            }
+        }
     });
 }
 
@@ -4250,24 +4000,39 @@ function addThreat(title, cve_num, description, stride_class, severity, mitigate
         updateThreatBadges(node)});
 }
 
-function deleteThreat(threat_name) {
+function deleteThreat(threat_name, currentNode) {
     let to_delete = threats[threat_name];
     if (to_delete === undefined) {
         showAlert("Threat " + threat_name + " not found!");
         return;
     }
-    // remove threat from all assets
-    for (let asset of to_delete.assets) {
-        let node = nodes.find(n => n.asset_name === asset);
-        if (node) {
-            // remove threat from node
-            node.threats[1] = node.threats[1].filter(t => t.threat_title !== threat_name);
-            // remove threat from badge
-            updateThreatBadges(node);
+    
+    // Local Data Cleanup across all assets
+    nodes.forEach(node => {
+        // Remove from all potential threat arrays (Suggested[0], Known[1], Mitigated[2])
+        for (let i = 0; i < 3; i++) {
+            node.threats[i] = node.threats[i].filter(t => t.threat_title !== threat_name);
         }
-    }
-    delete threats[threat_name];  // remove from static threats variable
-    // remove threat from model
+
+        // If a threat is deleted, check controls on this node that might have been mitigating it
+        let mitigatedControls = node.controls[2];
+        for (let j = mitigatedControls.length - 1; j >= 0; j--) {
+            let ctrl = mitigatedControls[j];
+            // Remove the deleted threat from the control's associated threats list
+            ctrl.threats = ctrl.threats.filter(t => t.threat_title !== threat_name);
+            
+            // If the control no longer mitigates any threats, move it back to 'Known'
+            if (ctrl.threats.length === 0) {
+                ctrl.control_status = "Known";
+                node.controls[1].push(ctrl);
+                node.controls[2].splice(j, 1);
+            }
+        }
+        updateThreatBadges(node);
+    });
+
+    delete threats[threat_name];
+
     $.ajax({
         type: "POST",
         url: deleteThreatUrl,
@@ -4282,6 +4047,9 @@ function deleteThreat(threat_name) {
         success: function(result){
             if (result !== 200) {
                 showAlert("Error deleting threat. Received: " + result);
+            } else if (currentNode) {
+                svg.dispatch('click'); 
+                svg.selectAll(".node_group").filter(d => d === currentNode).dispatch('click');
             }
         },
     });
@@ -4363,41 +4131,30 @@ function updateThreatBadges(asset) {
 function addControl(control_title, control_description, mitigated = false) {
     const selected_assets = nodes.filter(node => node.selected);
     if (selected_assets.length === 0) {
-        showAlert("Please select an asset to add a threat to!");
+        showAlert("Please select an asset to add a control to!");
         return;
     }
 
     const new_control = control_title === undefined;
     const description = new_control ? document.getElementById("control_description").value : control_description;
-
     const title = new_control ? document.getElementById("control_title").value : control_title;
+
     if (title === "") {
         showAlert("Please add a control title!");
         return;
     }
-    // else if (title in controls) {
-    //     alert("A control with that title already exists! Please choose a different title.");
-    //     return;
-    // }
-    // add threat to ALL selected assets
-    selected_assets.forEach(node => {node.controls[mitigated ? 2 : 1].push({
-        "control_title": title,
-        "control_description": description,
-        "control_status": "Known",
-        "threats": [],
-        "findings": null,
-        "assets": selected_assets.map(n => n.asset_name),
-    })});
-    // add threat to new threat array
-    // "title" should be unique since it is the key in the model
-    // controls[title] = {
-    //     "control_title": title,
-    //     "control_description": description,
-    //     "control_status": "Known",
-    //     "threats": [],
-    //     "findings": null,
-    //     "assets": selected_assets.map(node => node.asset_name),
-    // };
+
+    selected_assets.forEach(node => {
+        node.controls[mitigated ? 2 : 1].push({
+            "control_title": title,
+            "control_description": description,
+            "control_status": "Known",
+            "threats": [],
+            "findings": null,
+            "assets": selected_assets.map(n => n.asset_name),
+        })
+    });
+
     if (new_control) {
         $.ajax({
             type: "POST",
@@ -4415,6 +4172,8 @@ function addControl(control_title, control_description, mitigated = false) {
             success: function(result){
                 if (result !== 200) {
                     showAlert("Error storing newly created control. Received: " + result);
+                } else {
+                    showAlert("New control (" + title + ") added to " + selected_assets.map(node => node.asset_name).join(", ") + " successfully!");
                 }
             },
         });
@@ -4424,6 +4183,7 @@ function addControl(control_title, control_description, mitigated = false) {
     for (let textbox of textboxes) {
         textbox.value = "";
     }
+    
     const options = document.getElementById("options");
     for (let node of selected_assets) {
         if (options && options.children[0].value === node.id) {
@@ -4432,13 +4192,77 @@ function addControl(control_title, control_description, mitigated = false) {
     }
 }
 
+// Delete control from an existing DFD node
+function deleteControl(control, currentNode) {
+    const control_title = control.control_title;
+
+    // Remove the control from all assets in the local 'nodes' array
+    nodes.forEach(node => {
+        // Check all three status categories: Suggested [0], Known [1], Mitigated [2]
+        for (let i = 0; i < 3; i++) {
+            const index = node.controls[i].findIndex(c => c.control_title === control_title);
+            if (index > -1) {
+                node.controls[i].splice(index, 1);
+            }
+        }
+
+        // If a control is deleted, check threats on this node that were being mitigated by it
+        let mitigatedThreats = node.threats[2];
+        for (let j = mitigatedThreats.length - 1; j >= 0; j--) {
+            let thr = mitigatedThreats[j];
+            // Remove the deleted control from the threat's associated controls list
+            thr.controls = thr.controls.filter(c => c.control_title !== control_title);
+            
+            // If the threat no longer has any mitigating controls, move it back to 'Known'
+            if (thr.controls.length === 0) {
+                thr.threat_status = "Known";
+                node.threats[1].push(thr);
+                node.threats[2].splice(j, 1);
+            }
+        }
+        updateThreatBadges(node);
+    });
+
+    $.ajax({
+        type: "POST",
+        url: deleteControlUrl,
+        headers: {
+            "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value,
+        },
+        data: { 
+            name: control_title, 
+            project_name: projectName 
+        },
+        dataType: "html",
+        success: function(result) {
+            if (result != 200) {
+                showAlert("Error deleting control. Received: " + result);
+            } else if (currentNode) {
+                svg.dispatch('click');
+                svg.selectAll(".node_group").filter(d => d === currentNode).dispatch('click');
+            }
+        },
+        error: function() {
+            showAlert("Error: Could not reach the server to delete the control.");
+        }
+    });
+}
+
 function showAddAssumpPanel(goBack=false) {
+    const step = window.onboardingTour ? window.onboardingTour.currentStep() : -1;
+    if (step === 31) {
+        window.triggerTourNext();
+    }
     document.getElementById("new_assumption").style.display = goBack? "none":"block";
     document.getElementById("display_all_assumptions").style.display = goBack? "block":"none";
 }
 
 // function that displays the detail about the given assumption
-function showAssumpDetailPanel(assumption) {
+function showAssumpDetailPanel(assumption_id) {
+    let step = window.onboardingTour ? window.onboardingTour.currentStep() : -1;
+    if (step === 37) {
+        window.triggerTourNext();
+    }
     const panelDiv = document.getElementById("display_assumption_details");
     panelDiv.style.display = "block";
     // add a back button to go back to the complete list of assumptions (calls displayAllAssumptions())
@@ -4449,16 +4273,53 @@ function showAssumpDetailPanel(assumption) {
     // goBack.onclick = displayAllAssumptions;
     document.getElementById("display_all_assumptions").style.display = "none";
     // get the assumption from the global assumptions variable
-    let a = assumptions.find(a => a.text === assumption);
+    let a = assumptions.find(a => a.id === assumption_id); 
     if (!a) {
-        showAlert("Assumption not found: " + assumption);
+        showAlert("Assumption not found!");
         return;
     }
     // display names of affected assets, if any
     document.getElementById("affected_entities").innerText = a.assets.length > 0? a.assets.join(", ") : "No assets selected";
     // display the assumption text
     document.getElementById("assumption_text").innerText = a.text;
-    // TODO: buttons to edit, delete
+    // TODO: buttons to edit
+    document.getElementById("delete_assumption_btn").onclick = async function() {
+        const confirmed = await showConfirm("Are you sure you want to permanently delete this assumption?");
+        if (confirmed) {
+            deleteAssumption(a.id);
+        }
+    };
+}
+
+function deleteAssumption(assumption_id) {
+    // Remove from local array by ID
+    const index = assumptions.findIndex(a => a.id === assumption_id);
+    if (index > -1) {
+        assumptions.splice(index, 1);
+    }
+
+    $.ajax({
+        type: "POST",
+        url: deleteAssumptionUrl,
+        headers: {
+            "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value,
+        },
+        data: {
+            id: assumption_id, 
+            project_name: projectName,
+        },
+        dataType: "html",
+        success: function(result) {
+            if (result != 200) {
+                showAlert("Error deleting assumption. Received: " + result);
+            } else {
+                displayAllAssumptions();
+            }
+        },
+        error: function() {
+            showAlert("Error: Could not reach the server to delete the assumption.");
+        }
+    });
 }
 
 // Function to display each assumption in a list
@@ -4475,16 +4336,22 @@ function displayAllAssumptions() {
         }
         // container.innerHTML += "<div class=\"assumption_item\" onclick=\"showAssumpDetailPanel(\'" + assumption.text + "\');\">" + text + "</div>";
         // container.innerHTML += "<button class=\"add_button assumption_item popout_button\" onclick=\"showAssumpDetailPanel(\'" + assumption.text + "\');\">" + text + "</button>";
-        container.innerHTML += "<div class=\"alert alert-primary popout_alert\" role=\"alert\" onclick=\"showAssumpDetailPanel(\'" + assumption.text + "\');\">" + text + "</div>";
+        container.innerHTML += "<div class=\"alert alert-primary popout_alert\" role=\"alert\" onclick=\"showAssumpDetailPanel(" + assumption.id + ");\">" + text + "</div>";
     }
 }
 
-function addAssumption(text) {
+function addAssumption(text, id) {
+    const step = window.onboardingTour ? window.onboardingTour.currentStep() : -1;
+    if (step === 36) {
+        window.triggerTourNext();
+    }
+    
     const new_assumption = text === undefined;
     const selected_assets = nodes.filter(node => node.selected);
-    const assumption_text = new_assumption? document.getElementById("assumption_description").value : text;
-    assumptions.push({"text": assumption_text, "assets": selected_assets.map(node => node.asset_name)});
+    const assumption_text = new_assumption ? document.getElementById("assumption_description").value : text;
+    
     if (new_assumption) {
+        // Send to server first to get the database ID
         $.ajax({
             type: "POST",
             url: addAssumptionUrl,
@@ -4496,18 +4363,34 @@ function addAssumption(text) {
                 description: assumption_text,
                 project_name: projectName,
             },
-            data_type: "html",
-            success: function(result){
-                if (result !== 200) {
-                    showAlert("Error storing newly created assumption. Received: " + result);
+            dataType: "json", 
+            success: function(result) {
+                if (result.status !== 200) {
+                    showAlert("Error storing newly created assumption.");
+                    return;
                 }
+                
+                // Add to local array with the new database ID
+                assumptions.push({
+                    "id": result.id, 
+                    "text": assumption_text, 
+                    "assets": selected_assets.map(node => node.asset_name)
+                });
+                
+                document.getElementById("assumption_description").value = "";
+                displayAllAssumptions();
             },
             error: function(error) {
-                showAlert("Error storing newly created assumption. Received: " + error);
+                showAlert("Error storing newly created assumption.");
             }
         });
-        document.getElementById("assumption_description").value = "";  // clear the textbox
-        displayAllAssumptions();
+    } else {
+        // If it's not a new assumption, add it directly
+        assumptions.push({
+            "id": id, 
+            "text": assumption_text, 
+            "assets": selected_assets.map(node => node.asset_name)
+        });
     }
 }
 

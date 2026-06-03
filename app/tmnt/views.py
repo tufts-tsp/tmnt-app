@@ -512,18 +512,22 @@ def add_assumption(request):
     threats = request.POST.getlist("threats[]")
     comments = request.POST.get("description")
     project = get_object_or_404(Project, name=request.POST.get("project_name"), user=request.user)
+    
     with transaction.atomic():
         assump = Assumption(comments=comments, project=project)
-        assump.save()  # needed before many-to-many relationships can be added
+        assump.save()  # Gets its database ID here
+        
         assets = Entity.objects.filter(name__in=assets, project=project)
         threats = Threat.objects.filter(name__in=threats, project=project)
         assump.assets.add(*assets)
         assump.threats.add(*threats)
         assump.save()
+        
         ua = UserAction(username=request.user, project=project, action=f'create assumption', entities=comments,
                         details=f'Assets: {assets}; Threats: {threats}')
         ua.save()
-    return JsonResponse(200, safe=False)
+        
+    return JsonResponse({"status": 200, "id": assump.id})
 
 def edit_assumption(request):
     name = request.POST.get("name")
@@ -537,13 +541,22 @@ def edit_assumption(request):
     pass
 
 def delete_assumption(request):
-    name = request.POST.get("name")
+    # Retrieve the id passed from the frontend AJAX call
+    assumption_id = request.POST.get("id")
     project = get_object_or_404(Project, name=request.POST.get("project_name"), user=request.user)
-    assump = Assumption.objects.get(name=name, project=project)
+    
     with transaction.atomic():
-        assump.delete()
-        ua = UserAction(username=request.user, project=project, action=f'delete assumption', entities=name)
-        ua.save()
+        # Query by the exact database ID
+        assump = Assumption.objects.filter(id=assumption_id, project=project).first()
+        
+        if assump:
+            # Store the text temporarily so we can still log it in UserAction
+            comments = assump.comments 
+            assump.delete()
+            
+            ua = UserAction(username=request.user, project=project, action='delete assumption', entities=comments)
+            ua.save()
+            
     return JsonResponse(200, safe=False)
 
 def add_control(request):
@@ -666,8 +679,13 @@ def load_dfd(request, project_name):
         mitigated_assets = list(MitigatedThreat.objects.filter(control__name=c['name'], project=project).values_list('asset__name', flat=True))
         controls.append({'name': c['name'], 'description': c['description'], 'assets': control_assets, 'mitigated_assets': mitigated_assets})
     assumptions = []
-    for a in list(Assumption.objects.filter(project=project).values('comments')):
-        assumptions.append({'comments': a['comments'], 'assets': [obj.name for obj in Assumption.objects.get(comments=a['comments']).assets.all()], 'threats': [obj.name for obj in Assumption.objects.get(comments=a['comments']).threats.all()]})
+    for assump_obj in Assumption.objects.filter(project=project):
+        assumptions.append({
+            'id': assump_obj.id,
+            'comments': assump_obj.comments, 
+            'assets': [asset.name for asset in assump_obj.assets.all()], 
+            'threats': [threat.name for threat in assump_obj.threats.all()]
+        })
     # get entities and x,y positions (if stored)
     entities = Entity.objects.filter(project=project).values()
     # for each entity in entities, get its x,y position from D3NodePosition (if it exists)

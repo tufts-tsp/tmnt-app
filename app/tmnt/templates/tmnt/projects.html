@@ -43,13 +43,32 @@
         <a href="{% url 'login' %}" class="btn btn-primary">Login</a>
     {% endif %}
     {% if show_tutorial %}
+    
+    <style>
+        .introjs-skipbutton {
+            display: none !important;
+        }
+        .introjs-prevbutton {
+            display: none !important;
+        }
+        .introjs-donebutton {
+            display: none !important;
+        }
+        body[data-hide-next="true"] .introjs-button,
+        body[data-hide-next="true"] .introjs-tooltipbuttons {
+            display: none !important;
+        }
+    </style>
+
     <script>
     document.addEventListener("DOMContentLoaded", function () {
-        const projectLink = document.querySelector("#projectList a");
+        const projectLink = document.querySelector("#projectList a.card-title");
+        const newProjectBtn = document.querySelector("#newProjectBtn");
         
         const steps = [
             {
-                intro: "Welcome to TMNT! Let's get you started with a quick tour."
+                intro: "Welcome to TMNT! Let's get you started with a quick tour.",
+                interaction: true 
             }
         ];
 
@@ -57,25 +76,46 @@
             steps.push({
                 element: projectLink,
                 intro: "Click on your project to start threat modeling!",
-                position: 'right'
+                position: 'right',
+                interaction: true 
             });
         } else {
             steps.push({
-                element: document.querySelector("#newProjectBtn"),
-                intro: "It looks like you don't have a project yet. Create one to start!"
+                element: newProjectBtn,
+                intro: "It looks like you don't have a project yet. Create one to start!",
+                interaction: true
             });
         }
 
-        const tour = introJs().setOptions({ steps: steps });
-
-        tour.onbeforeexit(function() {
-            // If the user exits normally by clicking a project link
-            // We don't mark as "seen" yet because they haven't finished Step 2
+        const tour = introJs().setOptions({ 
+            steps: steps,
+            showCloseButton: false,
+            showBullets: false,
+            exitOnOverlayClick: false, // Prevents clicking off
+            exitOnEsc: false,          // Prevents hitting Escape
+            keyboardNavigation: false  // Prevents using arrow keys to skip
         });
 
-        // If they click the project link specifically, set the progress flag
+        // Dynamically toggle the Next button
+        tour.onbeforechange(function() {
+            const stepIndex = this._currentStep;
+            
+            if (stepIndex === 1) {
+                // Hide the Next/Done button so they MUST click the project link
+                document.body.setAttribute('data-hide-next', 'true');
+            } else {
+                // Allow the Next button to show.
+                document.body.removeAttribute('data-hide-next');
+            }
+        });
+
+        // Set the flag when they successfully transition to the next page
         if (projectLink) {
             projectLink.addEventListener('click', function() {
+                localStorage.setItem('onboarding_step', 'workspace_start');
+            });
+        } else if (newProjectBtn) {
+             newProjectBtn.addEventListener('click', function() {
                 localStorage.setItem('onboarding_step', 'workspace_start');
             });
         }
