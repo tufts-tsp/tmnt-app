@@ -12,7 +12,10 @@ import subprocess
 from django.http import JsonResponse, HttpResponseRedirect
 from django.contrib.auth.forms import UserCreationForm
 from django.views.generic import CreateView
+from django.views.decorators.http import require_POST
 from django.urls import reverse_lazy
+from django.urls import reverse
+from .models import UserProfile
 
 import grpc
 from controller_pb2_grpc import ControllerStub
@@ -34,7 +37,31 @@ class SignUpView(CreateView):
 
     def form_valid(self, form):
         response = super().form_valid(form)
+
+        user = self.object
+
+        UserProfile.objects.get_or_create(
+            user=user,
+            defaults={"has_seen_tutorial": False}
+        )
+
         return response
+
+@login_required
+@require_POST
+def mark_tutorial_seen(request):
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    profile.has_seen_tutorial = True
+    profile.save()
+    return JsonResponse({"status": "ok"})
+
+@login_required
+@require_POST
+def reset_tutorial(request):
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    profile.has_seen_tutorial = False
+    profile.save()
+    return JsonResponse({"status": "ok"})
 
 # class ProjectsListView(LoginRequiredMixin, ListView):
 #     model = Project
@@ -47,10 +74,18 @@ class SignUpView(CreateView):
 
 @login_required
 def project_list(request):
-    # return a queryset of projects associated with the user
-    projects = Project.objects.filter(user=request.user).order_by("-created_at")[:10]  # get last 10 projects
-    print(type(projects))
-    return render(request, "tmnt/projects.html", locals())
+    projects = Project.objects.filter(user=request.user).order_by("-created_at")[:10]
+
+    # Ensure profile exists (prevents crashes for old accounts)
+    profile, created = UserProfile.objects.get_or_create(user=request.user)
+
+    show_tutorial = not profile.has_seen_tutorial
+
+    return render(request, "tmnt/projects.html", {
+        "projects": projects,
+        "show_tutorial": show_tutorial,
+    })
+
 
 @login_required
 def submit_experiment(request):
@@ -493,18 +528,22 @@ def add_assumption(request):
     threats = request.POST.getlist("threats[]")
     comments = request.POST.get("description")
     project = get_object_or_404(Project, name=request.POST.get("project_name"), user=request.user)
+    
     with transaction.atomic():
         assump = Assumption(comments=comments, project=project)
-        assump.save()  # needed before many-to-many relationships can be added
+        assump.save()  # Gets its database ID here
+        
         assets = Entity.objects.filter(name__in=assets, project=project)
         threats = Threat.objects.filter(name__in=threats, project=project)
         assump.assets.add(*assets)
         assump.threats.add(*threats)
         assump.save()
+        
         ua = UserAction(username=request.user, project=project, action=f'create assumption', entities=comments,
                         details=f'Assets: {assets}; Threats: {threats}')
         ua.save()
-    return JsonResponse(200, safe=False)
+        
+    return JsonResponse({"status": 200, "id": assump.id})
 
 def edit_assumption(request):
     name = request.POST.get("name")
@@ -518,29 +557,57 @@ def edit_assumption(request):
     pass
 
 def delete_assumption(request):
-    name = request.POST.get("name")
+    # Retrieve the id passed from the frontend AJAX call
+    assumption_id = request.POST.get("id")
     project = get_object_or_404(Project, name=request.POST.get("project_name"), user=request.user)
-    assump = Assumption.objects.get(name=name, project=project)
+    
     with transaction.atomic():
-        assump.delete()
-        ua = UserAction(username=request.user, project=project, action=f'delete assumption', entities=name)
-        ua.save()
+        # Query by the exact database ID
+        assump = Assumption.objects.filter(id=assumption_id, project=project).first()
+        
+        if assump:
+            # Store the text temporarily so we can still log it in UserAction
+            comments = assump.comments 
+            assump.delete()
+            
+            ua = UserAction(username=request.user, project=project, action='delete assumption', entities=comments)
+            ua.save()
+            
     return JsonResponse(200, safe=False)
 
 def add_control(request):
     name = request.POST.get("name")
     description = request.POST.get("description")
-    assets = request.POST.getlist("assets[]")
+    asset_names = request.POST.getlist("assets[]")
     project = get_object_or_404(Project, name=request.POST.get("project_name"), user=request.user)
+
     with transaction.atomic():
-        control = Control(name=name, description=description, project=project)
-        control.save()
-        assets = Entity.objects.filter(name__in=assets, project=project)
-        print('add_control received assets:', len(assets), assets)
+        # Try to find existing control
+        control, created = Control.objects.get_or_create(
+            name=name,
+            project=project,
+            defaults={"description": description}
+        )
+
+        # If control exists but description changed, optionally update it
+        if not created and description and control.description != description:
+            control.description = description
+            control.save()
+
+        # Add new assets
+        assets = Entity.objects.filter(name__in=asset_names, project=project)
         control.assets.add(*assets)
         control.save()
-        ua = UserAction(username=request.user, project=project, action=f'create control', entities=name, details=f'Assets: {assets}; Description: {description}')
+
+        ua = UserAction(
+            username=request.user,
+            project=project,
+            action='create or update control',
+            entities=name,
+            details=f'Assets: {asset_names}; Description: {description}'
+        )
         ua.save()
+
     return JsonResponse(200, safe=False)
 
 def edit_control(request):
@@ -628,8 +695,13 @@ def load_dfd(request, project_name):
         mitigated_assets = list(MitigatedThreat.objects.filter(control__name=c['name'], project=project).values_list('asset__name', flat=True))
         controls.append({'name': c['name'], 'description': c['description'], 'assets': control_assets, 'mitigated_assets': mitigated_assets})
     assumptions = []
-    for a in list(Assumption.objects.filter(project=project).values('comments')):
-        assumptions.append({'comments': a['comments'], 'assets': [obj.name for obj in Assumption.objects.get(comments=a['comments']).assets.all()], 'threats': [obj.name for obj in Assumption.objects.get(comments=a['comments']).threats.all()]})
+    for assump_obj in Assumption.objects.filter(project=project):
+        assumptions.append({
+            'id': assump_obj.id,
+            'comments': assump_obj.comments, 
+            'assets': [asset.name for asset in assump_obj.assets.all()], 
+            'threats': [threat.name for threat in assump_obj.threats.all()]
+        })
     # get entities and x,y positions (if stored)
     entities = Entity.objects.filter(project=project).values()
     # for each entity in entities, get its x,y position from D3NodePosition (if it exists)

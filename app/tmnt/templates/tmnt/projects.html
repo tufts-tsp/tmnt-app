@@ -10,10 +10,11 @@
         <h2>Projects</h2>
             <div class="row">
                 <div class="col-md-12">
-                    <a href="{% url 'create_project' %}" class="btn btn-primary mb-3">Create New Project</a>
+                    <a href="{% url 'create_project' %}" class="btn btn-primary mb-3" id="newProjectBtn">Create New Project</a>
                 </div>
             </div>
-            <div class="row">
+            
+            <div class="row" id="projectList">
                 {% if not projects %}
                     <div class="col-md-12">
                         <p>Create a new project to get started.</p>
@@ -40,5 +41,87 @@
         {# Failsafe: this shouldn't be visible #}
         <h2>Please log in to view your projects.</h2>
         <a href="{% url 'login' %}" class="btn btn-primary">Login</a>
+    {% endif %}
+    {% if show_tutorial %}
+    
+    <style>
+        .introjs-skipbutton {
+            display: none !important;
+        }
+        .introjs-prevbutton {
+            display: none !important;
+        }
+        .introjs-donebutton {
+            display: none !important;
+        }
+        body[data-hide-next="true"] .introjs-button,
+        body[data-hide-next="true"] .introjs-tooltipbuttons {
+            display: none !important;
+        }
+    </style>
+
+    <script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const projectLink = document.querySelector("#projectList a.card-title");
+        const newProjectBtn = document.querySelector("#newProjectBtn");
+        
+        const steps = [
+            {
+                intro: "Welcome to TMNT! Let's get you started with a quick tour.",
+                interaction: true 
+            }
+        ];
+
+        if (projectLink) {
+            steps.push({
+                element: projectLink,
+                intro: "Click on your project to start threat modeling!",
+                position: 'right',
+                interaction: true 
+            });
+        } else {
+            steps.push({
+                element: newProjectBtn,
+                intro: "It looks like you don't have a project yet. Create one to start!",
+                interaction: true
+            });
+        }
+
+        const tour = introJs().setOptions({ 
+            steps: steps,
+            showCloseButton: false,
+            showBullets: false,
+            exitOnOverlayClick: false, // Prevents clicking off
+            exitOnEsc: false,          // Prevents hitting Escape
+            keyboardNavigation: false  // Prevents using arrow keys to skip
+        });
+
+        // Dynamically toggle the Next button
+        tour.onbeforechange(function() {
+            const stepIndex = this._currentStep;
+            
+            if (stepIndex === 1) {
+                // Hide the Next/Done button so they MUST click the project link
+                document.body.setAttribute('data-hide-next', 'true');
+            } else {
+                // Allow the Next button to show.
+                document.body.removeAttribute('data-hide-next');
+            }
+        });
+
+        // Set the flag when they successfully transition to the next page
+        if (projectLink) {
+            projectLink.addEventListener('click', function() {
+                localStorage.setItem('onboarding_step', 'workspace_start');
+            });
+        } else if (newProjectBtn) {
+             newProjectBtn.addEventListener('click', function() {
+                localStorage.setItem('onboarding_step', 'workspace_start');
+            });
+        }
+
+        tour.start();
+    });
+    </script>
     {% endif %}
 {% endblock %}

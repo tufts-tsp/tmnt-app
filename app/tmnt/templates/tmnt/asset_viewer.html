@@ -287,6 +287,7 @@
                 <div id="affected_entities">No assets associated with this assumption</div>
                 <h4>Assumption description:</h4>
                 <div id="assumption_text"></div>
+                <button class="add_button" id="delete_assumption_btn" style="color: red; border-color: red;">Delete</button>
             </div>
 
             <!-- Creating new assumption-->
@@ -326,7 +327,6 @@
 </div>
 
 <!-- JavaScript code starts here -->
-
 <script type="text/javascript">
 // get project name from Django context
     const projectName = "{{ project_name|escapejs }}";
@@ -351,12 +351,322 @@
     const editControlUrl = "{% url 'api/edit_control' %}";
     const deleteControlUrl = "{% url 'api/delete_control' %}";
     const updateNodePositionUrl = "{% url 'api/update_node_position' %}";
+
+
+    // Globals
+    let onboardingTour;
+
+    let showSection = window.showSection || function(icon) { console.warn("App logic not loaded yet."); };
+
+    function triggerTourNext() {
+        if (onboardingTour) {
+            console.log("Forcing next step. Current:", onboardingTour.currentStep());
+            onboardingTour.nextStep();
+        }
+    }
 </script>
+
+<style>
+    /* Hide the 'X' Close button entirely */
+    .introjs-skipbutton {
+        display: none !important;
+    }
+
+    /* Ghost overlay logic for clicking through the mask */
+    .introjs-overlay { display: none !important; }
+    .introjs-helperLayer {
+        pointer-events: none !important;
+        background: transparent !important;
+        box-shadow: 0 0 0 5000px rgba(0, 0, 0, 0.7) !important;
+    }
+
+    /* Button visibility management */
+    body[data-interaction="true"] .introjs-nextbutton { display: none !important; }
+    .introjs-prevbutton { display: none !important; }
+
+    /* Block all clicks globally while tutorial is active */
+    body.tutorial-active {
+        pointer-events: none !important;
+    }
+
+    /* Re-enable clicks ONLY for the currently highlighted element */
+    body.tutorial-active .introjs-showElement {
+        pointer-events: auto !important;
+    }
+
+    /* Re-enable clicks for the Intro.js tooltips and Next/Done buttons */
+    body.tutorial-active .introjs-tooltipReferenceLayer {
+        pointer-events: auto !important;
+    }
+
+    /* Re-enable clicks for your Bootstrap modals/alerts */
+    body.tutorial-active .modal,
+    body.tutorial-active .modal-backdrop {
+        pointer-events: auto !important;
+    }
+</style>
+
 <script type="text/javascript" src="{% static 'scripts/interface.js' %}"></script>
-{% else %}
-    <div class="container mt-5">
-        <h2 class="mb-4">Ready to start threat modeling?</h2>
-        <p>Please <a href="{% url 'login' %}">log in</a> or <a href="{% url 'register' %}">register</a> a new account.</p>
-    </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        if (localStorage.getItem('onboarding_step') === 'workspace_start') {
+            document.body.classList.add('tutorial-active');
+
+            onboardingTour = introJs.tour();
+            window.onboardingTour = onboardingTour;
+
+            onboardingTour.setOptions({
+                steps: [
+                    { element: '.dfd_assetview', intro: "This is your <strong>system diagram</strong>. It represents the system we will be threat modeling. The system diagram contains <strong>actors</strong>, <strong>assets</strong>, and <strong>data flows</strong>, which we will discuss next.", interaction: false }, // 0
+                    { element: '.dfd_assetview', intro: "<strong>Actors</strong> are the humans (or other agents) that interact with the system.", interaction: false }, // 1
+                    { element: '.dfd_assetview', intro: "<strong>Assets</strong> are elements of the system. They could be software components, servers, or physical devices. We are also representing assets as squares.", interaction: false }, // 2
+                    { element: '.dfd_assetview', intro: "<strong>Data stores</strong> are places where data is stored and accessed.", interaction: false }, // 3
+                    { element: '.dfd_assetview', intro: "<strong>Data flows</strong> are lines drawn between elements that show where data moves in the system.", interaction: false }, // 4
+                    { element: 'img[src*="warnings.png"]', intro: "Click the Threats icon to go to the threats panel.", interaction: true }, // 5
+                    { element: '.itemsBar', intro: "The threats panel is where we identify <strong>what could go wrong in the system</strong>. Threats are things that could go wrong both accidentally and in malicious attacks. <strong>Next</strong>, we will show how to add a threat to the diagram.", interaction: true }, // 6
+                    { element: '#showSelectedAssets', intro: "First, we need to specify where in the system the threat could occur. Click 'Select Assets' to begin specifying where the threat occurs.", interaction: true }, // 7
+                    { element: '.dfd_assetview', intro: "Select the asset on the diagram...", interaction: false }, // 8
+                    { element: '#display_selected_for_threats', intro: "Click 'Done Selecting'.", interaction: true }, // 9
+                    { element: '#threat_title', intro: "Enter a title that briefly summarizes the threat, then press Enter.", interaction: true }, // 10
+                    { element: '#threats button[onclick="addThreat()"]', intro: "Click 'Add Threat' to add the threat to the diagram.", interaction: true }, // 11
+                    { element: '#messageModal .modal-content', intro: "Success! Click 'OK' to continue.", interaction: true }, // 12
+                    { element: '#bottom_bar', intro: "Now select the element you just added a threat to. The threat will appear in 'Known threats', where we see all unmitigated threats.", interaction: true }, // 13
+                    { element: 'img[src*="wrench.png"]', intro: "Next, we need to decide what to do about each threat. The protections we put in place to prevent threats from occurring are called <strong>controls</strong>. Click the Controls icon to see the controls panel.", interaction: true }, // 14
+                    { element: '#showSelectedAssetsControls', intro: "Similar to threats, we need to select which assets the control applies to. Click 'Select Assets'.", interaction: true }, // 15
+                    { element: '.dfd_assetview', intro: "Select the asset on the diagram...", interaction: false }, // 16
+                    { element: '#display_selected_for_controls', intro: "Click 'Done Selecting'.", interaction: true }, // 17
+                    { element: '#control_title', intro: "Enter a title for the control and then press Enter. (This is just an example, so it doesn't matter what you name it.)", interaction: true }, // 18
+                    { element: '#controls button[onclick="addControl()"]', intro: "Click 'Add Control'.", interaction: true }, // 19
+                    { element: '#messageModal .modal-content', intro: "Success! You added a control! Click 'OK' to continue.", interaction: true }, // 20
+                    { element: '.dfd_assetview', intro: "Select the asset on the diagram...", interaction: true }, // 21
+                    { element: '#bottom_bar', intro: "The 'Known' category is for threats that are known to affect this element and are unmitigated/uncontrolled. Hover over 'Known' under Threats and click the threat you just created.", interaction: true }, // 22
+                    { element: '#bottom_bar', intro: "Here you can view info about the threat. To say that this threat is mitigated by some control, you can <strong>associate</strong> the threat with a control. Click 'Select a control...' click the control you just made, then click the plus button.", interaction: true }, // 23
+                    { element: '#bottom_bar', intro: "You've successfully associated a threat with a control, mitigating that threat. Note: This can also be done by viewing a control. The threat will now appear in the <strong>Mitigated</strong> category.", interaction: false }, // 24
+                    { element: '#bottom_bar', intro: "You can now delete this threat by clicking 'Delete Threat'. (If you feel the threat you created really exists in this system, you can create the threat again after the tutorial.)", interaction: true }, // 25
+                    { element: '#messageModal .modal-content', intro: "Success! Click 'OK' to continue.", interaction: true }, // 26
+                    { element: '#bottom_bar', intro: "Hover over 'Known' under Controls and click the control you created.", interaction: true }, // 27
+                    { element: '#bottom_bar', intro: "You can now delete this control by clicking 'Delete Control'. (If you think this control should exist in the system, you can create it again after the tutorial.)", interaction: true }, // 28
+                    { element: '#messageModal .modal-content', intro: "Success! Click 'OK' to continue.", interaction: true }, // 29
+                    { element: 'img[src*="thought-cloud.svg"]', intro: "If you're making any <strong>assumptions</strong> about how the system works, please document these assumptions. This helps us understand your motivations and reasoning. Now, click the Assumptions icon to try creating an assumption.", interaction: true }, // 30
+                    { element: '#start_adding_assump', intro: "Click 'Add new assumption'.", interaction: true }, // 31
+                    { element: '#showSelectedAssetsAssump', intro: "Click 'Select Assets' to select which assets are affected by the assumption.", interaction: true }, // 32
+                    { element: '.dfd_assetview', intro: "Select the asset on the diagram...", interaction: false }, // 33
+                    { element: '#display_selected_for_assump', intro: "Click 'Done Selecting'.", interaction: true }, // 34
+                    { element: '#assumption_description', intro: "Enter an assumption description and then press Enter.", interaction: true }, // 35
+                    { element: '#submit_assumption', intro: "Click 'Add Assumption'.", interaction: true }, // 36
+                    { element: '#assumption_container', intro: "Success! Now, click on the assumption you just added.", interaction: true }, // 37
+                    { element: '#delete_assumption_btn', intro: "Click 'Delete' to delete the assumption.", interaction: true }, // 38
+                    { element: '#messageModal .modal-content', intro: "Success! Click 'OK' to continue.", interaction: true }, // 39
+                    { intro: "Congrats! You've successfully completed the tutorial. For the remainder of the activity, we will ask you to <strong>add all threats</strong> that you think exist to the system, and <strong>add all controls</strong> that you think should be added to mitigate the threats. When you are done, click 'Finish experiment' at the top of the page. If you need a reminder of the task, click the info icon at the top of the page.", interaction: true }, // 40
+                ],
+                exitOnOverlayClick: false,
+                exitOnEsc: false,
+                showStepNumbers: false,
+                disableInteraction: false,
+                keyboardNavigation: true,
+                showProgress: true,
+                showBullets: false,
+            });
+
+            // Ensure the click-blocker is removed when the tutorial ends
+            onboardingTour.oncomplete(function() {
+                document.body.classList.remove('tutorial-active');
+            });
+            onboardingTour.onexit(function() {
+                document.body.classList.remove('tutorial-active');
+            });
+
+            window.addEventListener('keydown', function(e) {
+                if (!window.onboardingTour) return;
+
+                const code = e.keyCode || e.which;
+                if (code === 13) { // Enter Key
+                    const step = window.onboardingTour.currentStep();
+
+                    // Threat Title Logic
+                    if (step === 10) {
+                        const val = document.getElementById('threat_title').value.trim();
+                        if (val === "") {
+                            alert("Please enter a threat title first!");
+                            e.preventDefault();
+                            e.stopImmediatePropagation(); // Stops IntroJS from seeing the event
+                            return false;
+                        }
+                        // If not empty, let it pass so IntroJS moves to next step
+                    }
+
+                    // Control Title Logic
+                    else if (step === 18) {
+                        const val = document.getElementById('control_title').value.trim();
+                        if (val === "") {
+                            alert("Please enter a control title first!");
+                            e.preventDefault();
+                            e.stopImmediatePropagation();
+                            return false;
+                        }
+                        // If not empty, let it pass so IntroJS moves to next step
+                    }
+
+                    // Assumption Title Logic
+                    else if (step === 35) {
+                        const val = document.getElementById('assumption_description').value.trim();
+                        if (val === "") {
+                            alert("Please enter an assumption description first!");
+                            e.preventDefault();
+                            e.stopImmediatePropagation();
+                            return false;
+                        }
+                        // If not empty, let it pass so IntroJS moves to next step
+                    }
+
+                    // BLOCK ENTER for all other steps
+                    else {
+                        e.preventDefault();
+                        e.stopImmediatePropagation();
+                        return false;
+                    }
+                }
+            }, true);
+
+            onboardingTour.onchange(function() {
+                const step = this.currentStep();
+                if (step === 8 || step === 16 || step === 21 || step === 33) {
+                    svg.selectAll(".node_group").each(function(d) {
+                            d3.select(this).selectAll(".asset")
+                                .style("stroke", "black")
+                                .style("stroke-width", "1");
+                        });
+                        d3.selectAll(".link")
+                            .style("stroke", "black")
+                            .attr("marker-end", "url(#arrow)");
+                        for (let node of nodes) {
+                            node.selected = false;
+                        }
+                    resetBottomBar();
+                    const assetName = nodes[0] ? nodes[0].asset_name : "the asset";
+                    const newText = "Select asset <strong>" + assetName + "</strong> on the diagram.";
+                    if (this._introItems && this._introItems[step]) {
+                        this._introItems[step].intro = newText;
+                    }
+                    setTimeout(() => {
+                        const tooltipText = document.querySelector('.introjs-tooltiptext');
+                        if (tooltipText) tooltipText.innerHTML = newText;
+                        this.refresh();
+                    }, 50);
+                }
+                if (step === 37) {
+                    // Force the UI to show the list container immediately
+                    document.getElementById("new_assumption").style.display = "none";
+                    document.getElementById("display_all_assumptions").style.display = "block";
+
+                    // Wait to finish rendering the HTML, then refresh the highlight box
+                    setTimeout(() => {
+                        this.refresh();
+                    }, 300);
+                }
+            });
+
+            onboardingTour.onbeforechange(function() {
+                const step = this.currentStep();
+                const forward = onboardingTour._direction === 'forward';
+
+                if (typeof svg !== 'undefined' && typeof d3 !== 'undefined') {
+                    if (step >= 1 && step <= 4) {
+                        // Removes highlights from the previous step before applying new ones
+                        svg.selectAll(".node_group").each(function(d) {
+                            d3.select(this).selectAll(".asset")
+                                .style("stroke", "black")
+                                .style("stroke-width", "1");
+                        });
+                        d3.selectAll(".link")
+                            .style("stroke", "black")
+                            .attr("marker-end", "url(#arrow)");
+                        for (let node of nodes) {
+                            node.selected = false;
+                        }
+                        resetBottomBar();
+                    }
+
+                    if (step === 1) {
+                        svg.selectAll(".node_group")
+                            .filter(d => d && d.asset_type === 'Actor')
+                            .filter((d, i) => i === 0)
+                            .each(function(d) {
+                                // Simulate a user click to populate the bottom bar
+                                d3.select(this).dispatch('click');
+                            });
+                    }
+
+                    if (step === 2) {
+                        svg.selectAll(".node_group")
+                            .filter((d, i) => i === 0)
+                            .each(function(d) {
+                                // Simulate a user click to populate the bottom bar
+                                d3.select(this).dispatch('click');
+                            });
+                    }
+
+                    if (step === 3) {
+                        svg.selectAll(".node_group")
+                            .filter(d => d && d.asset_type === 'Data Store')
+                            .filter((d, i) => i === 0)
+                            .each(function(d) {
+                                // Simulate a user click to populate the bottom bar
+                                d3.select(this).dispatch('click');
+                            });
+                    }
+
+                    if (step === 4) {
+                        d3.selectAll(".link")
+                            .filter((d, i) => i === 0)
+                            .each(function(d) {
+                                if (typeof viewDataflow === 'function') {
+                                    viewDataflow(d);
+                                }
+                            });
+                    }
+                }
+
+                if ((step === 9 || step === 17 || step === 22 || step === 34) && forward) {
+                    const selected = nodes.filter(n => n.selected);
+                    if (selected.length != 1 || selected[0].id != nodes[0].id) {
+                        alert("Please select the correct asset on the diagram first!");
+                        return false;
+                    }
+                }
+
+                if (step === 11 && forward) {
+                    if (document.getElementById('threat_title').value.trim() === "") {
+                        alert("Threat title cannot be empty!");
+                        return false;
+                    }
+                }
+                if (step === 19 && forward) {
+                    if (document.getElementById('control_title').value.trim() === "") {
+                        alert("Control title cannot be empty!");
+                        return false;
+                    }
+                }
+                if (step === 36 && forward) {
+                    if (document.getElementById('assumption_description').value.trim() === "") {
+                        alert("Assumption description cannot be empty!");
+                        return false;
+                    }
+                }
+
+                const activeSteps = [5, 7, 9, 10, 11, 12, 14, 15, 17, 18, 19, 20, 21, 22, 23, 25, 26, 27, 28, 29, 30, 31, 32, 34, 35, 36, 37, 38, 39];
+                document.body.setAttribute('data-interaction', activeSteps.includes(step));
+
+                if (typeof showSection === "function") {
+                    if ([7, 8, 9, 10, 11, 12].includes(step)) showSection('threats');
+                    if ([15, 16, 17, 18, 19, 20].includes(step)) showSection('controls');
+                }
+            });
+
+            onboardingTour.start();
+        }
+    });
+</script>
 {% endif %}
 {% endblock %}

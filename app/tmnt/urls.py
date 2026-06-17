@@ -41,4 +41,6 @@ urlpatterns = [
     # path("register/", SignUpView.as_view(), name="register"),
     path("submit_experiment/", views.submit_experiment, name="submit_experiment"),
     path("accounts/", include("django.contrib.auth.urls")),  # For login/logout
+    path("mark_tutorial_seen/", views.mark_tutorial_seen, name="mark_tutorial_seen"),
+    path("reset-tutorial/", views.reset_tutorial, name="reset_tutorial"),
 ]
