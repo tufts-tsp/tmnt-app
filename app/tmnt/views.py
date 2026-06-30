@@ -14,8 +14,6 @@ from django.contrib.auth.forms import UserCreationForm
 from django.views.generic import CreateView
 from django.views.decorators.http import require_POST
 from django.urls import reverse_lazy
-from django.urls import reverse
-from .models import UserProfile
 
 import grpc
 from controller_pb2_grpc import ControllerStub
@@ -40,7 +38,7 @@ class SignUpView(CreateView):
 
         user = self.object
 
-        UserProfile.objects.get_or_create(
+        ParticipantUser.objects.get_or_create(
             user=user,
             defaults={"has_seen_tutorial": False}
         )
@@ -50,7 +48,7 @@ class SignUpView(CreateView):
 @login_required
 @require_POST
 def mark_tutorial_seen(request):
-    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    profile, _ = ParticipantUser.objects.get_or_create(user=request.user)
     profile.has_seen_tutorial = True
     profile.save()
     return JsonResponse({"status": "ok"})
@@ -58,7 +56,7 @@ def mark_tutorial_seen(request):
 @login_required
 @require_POST
 def reset_tutorial(request):
-    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    profile, _ = ParticipantUser.objects.get_or_create(user=request.user)
     profile.has_seen_tutorial = False
     profile.save()
     return JsonResponse({"status": "ok"})
@@ -77,7 +75,7 @@ def project_list(request):
     projects = Project.objects.filter(user=request.user).order_by("-created_at")[:10]
 
     # Ensure profile exists (prevents crashes for old accounts)
-    profile, created = UserProfile.objects.get_or_create(user=request.user)
+    profile, created = ParticipantUser.objects.get_or_create(user=request.user)
 
     show_tutorial = not profile.has_seen_tutorial
 
