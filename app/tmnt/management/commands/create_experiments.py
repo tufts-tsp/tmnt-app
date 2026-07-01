@@ -23,7 +23,7 @@ class Command(BaseCommand):
             if not ParticipantUser.objects.filter(user=dummy_user).exists():
                 participant_user = ParticipantUser.objects.create(user=dummy_user, is_participant=True)
                 participant_user.save()
-                self.stdout.write(f'User {options['username']} has no associated ParticipantUser. Creating...')
+                self.stdout.write(f'User {options["username"]} has no associated ParticipantUser. Creating...')
                 pu = ParticipantUser.objects.create(user=dummy_user, is_participant=True,
                                                     experiment_group=options['experiment_group'])
                 pu.save()
