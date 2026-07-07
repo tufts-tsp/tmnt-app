@@ -356,7 +356,7 @@
     // Globals
     let onboardingTour;
 
-    let showSection = window.showSection || function(icon) { console.warn("App logic not loaded yet."); };
+    {#let showSection = window.showSection || function(icon) { console.warn("App logic not loaded yet."); };#}
 
     function triggerTourNext() {
         if (onboardingTour) {
