@@ -104,10 +104,6 @@
                 <div class="asset_selection"></div>
                 <button type="button" class="add_button" id="showSelectedAssets" onclick="showSelectAssets('showSelectedAssets', 'display_selected_for_threats')">Select Assets</button>
                 <button type="button" class="add_button" id="display_selected_for_threats" onclick="displaySelectedAssets('threats')" style="display:none">Done Selecting</button>
-{#            <label for="threat_dropdown">Add to asset:</label>#}
-{#            <select name="threat_dropdown" id="threat_dropdown" class="dropdown asset_dropdown" onchange="showSuggestedThreats()" disabled>#}
-{#                <option value="invalid">Add an asset first!</option>#}
-{#            </select>#}
 
             <br>
             <input class="threat_textbox" id="threat_title" type="text" placeholder="Threat title..." name="threat_title">
@@ -424,7 +420,7 @@
                     { element: '.dfd_assetview', intro: "<strong>Data stores</strong> are places where data is stored and accessed.", interaction: false }, // 3
                     { element: '.dfd_assetview', intro: "<strong>Data flows</strong> are lines drawn between elements that show where data moves in the system.", interaction: false }, // 4
                     { element: 'img[src*="warnings.png"]', intro: "Click the Threats icon to go to the threats panel.", interaction: true }, // 5
-                    { element: '.itemsBar', intro: "The threats panel is where we identify <strong>what could go wrong in the system</strong>. Threats are things that could go wrong both accidentally and in malicious attacks. <strong>Next</strong>, we will show how to add a threat to the diagram.", interaction: false }, // 6
+                    { element: '.itemsBar', intro: "The threats panel is where we identify <strong>what could go wrong in the system</strong>. Threats are things that could go wrong both accidentally and in malicious attacks. <strong>Next</strong>, we will show how to add a threat to the diagram.", interaction: true }, // 6
                     { element: '#showSelectedAssets', intro: "First, we need to specify where in the system the threat could occur. Click 'Select Assets' to begin specifying where the threat occurs.", interaction: true }, // 7
                     { element: '.dfd_assetview', intro: "Select the asset on the diagram...", interaction: false }, // 8
                     { element: '#display_selected_for_threats', intro: "Click 'Done Selecting'.", interaction: true }, // 9

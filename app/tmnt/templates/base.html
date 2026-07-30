@@ -16,28 +16,7 @@
 </head>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
-        const shareBtn = document.getElementById("share-btn");
         const restartTutorialBtn = document.getElementById("restart-tutorial-btn");
-
-        if (shareBtn) {
-            shareBtn.addEventListener("click", function (e) {
-                e.preventDefault();
-                fetch("{% url 'reset_tutorial' %}", {
-                    method: "POST",
-                    headers: {
-                        "X-CSRFToken": "{{ csrf_token }}"
-                    }
-                })
-                .then(response => {
-                    if (!response.ok) throw new Error("Failed to reset tutorial");
-                    window.location.href = "{% url 'view_projects' %}";
-                })
-                .catch(err => {
-                    console.error(err);
-                    alert("Failed to reset onboarding state");
-                });
-            });
-        }
 
         // Restart the tutorial from directly within the project
         if (restartTutorialBtn) {
@@ -62,16 +41,14 @@
         <h1>Threat Modeling Naturally Tool</h1>
         <div class="topnav" style="display: flex; align-items: center; justify-content: flex-end;">
 
-            <a href="#" data-bs-toggle="modal" data-bs-target="#infoModal" title="Task Information" style="margin-right: 15px; display: flex; align-items: center;">
-                <img src="{% static 'info.png' %}" alt="Info" style="width: 24px; height: 24px;">
-            </a>
-
-            <a href="#" id="share-btn" style="margin-right: 15px;">Share</a>
+{#            <a href="#" id="share-btn" style="margin-right: 15px;">Share</a>#}
 
             {% if user.is_authenticated %}
-            <a href="#" class="logout-button" style="background-color: #dc3545" data-bs-toggle="modal" data-bs-target="#logoutModal" role="button">Log Out</a>
-            <a href="{% url 'view_projects' %}">Profile</a>
-            <a href="#" id="submit-exp-button" style="background-color: #dc3545; display: none;" data-bs-toggle="modal" data-bs-target="#submitExpModal" role="button">Submit Experiment</a>
+                <a href="#" data-bs-toggle="modal" data-bs-target="#infoModal" title="Task Information" style="margin-right: 15px; display: flex; align-items: center;">
+                    <img src="{% static 'info.png' %}" alt="Info" style="width: 24px; height: 24px;"></a>
+                <a href="#" class="logout-button" style="background-color: #dc3545" data-bs-toggle="modal" data-bs-target="#logoutModal" role="button">Log Out</a>
+                <a href="{% url 'view_projects' %}">Profile</a>
+                <a href="#" id="submit-exp-button" style="background-color: #dc3545; display: none;" data-bs-toggle="modal" data-bs-target="#submitExpModal" role="button">Submit Experiment</a>
             {% else %}
                 <a href="{% url 'login' %}">Login</a>
             {% endif %}
