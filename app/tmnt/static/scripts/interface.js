@@ -1186,7 +1186,7 @@ function clicked(e) {
     }
 
     const step = window.onboardingTour ? window.onboardingTour.currentStep() : -1;
-    if (step === 21) {
+    if (step === 8 || step === 16 || step === 21 || step === 33) {
         window.triggerTourNext();
     }
 
