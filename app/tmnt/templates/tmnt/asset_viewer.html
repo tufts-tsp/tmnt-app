@@ -395,6 +395,20 @@
         pointer-events: auto !important;
     }
 
+    body.tutorial-active .introjs-tooltip {
+        pointer-events: auto !important;
+    }
+
+    body.tutorial-active .introjs-nextbutton,
+    body.tutorial-active .introjs-skipbutton,
+    body.tutorial-active button[data-action] {
+        pointer-events: auto !important;
+        cursor: pointer !important;
+        display: inline-block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+
     /* Re-enable clicks for your Bootstrap modals/alerts */
     body.tutorial-active .modal,
     body.tutorial-active .modal-backdrop {
@@ -566,6 +580,12 @@
             onboardingTour.onbeforechange(function() {
                 const step = this.currentStep();
                 const forward = onboardingTour._direction === 'forward';
+                const nextStep = forward ? step + 1 : step - 1;
+
+                // Set data-interaction for the NEXT step before it's displayed
+                const activeSteps = [5, 7, 9, 10, 11, 12, 14, 15, 17, 18, 19, 20, 21, 22, 23, 25, 26, 27, 28, 29, 30, 31, 32, 34, 35, 36, 37, 38, 39];
+                document.body.setAttribute('data-interaction', activeSteps.includes(nextStep));
+                console.log("BeforeChange - Current Step:", step, "Next Step:", nextStep, "Interaction:", activeSteps.includes(nextStep));
 
                 if (typeof svg !== 'undefined' && typeof d3 !== 'undefined') {
                     if (step >= 1 && step <= 4) {
@@ -650,9 +670,6 @@
                         return false;
                     }
                 }
-
-                const activeSteps = [5, 7, 9, 10, 11, 12, 14, 15, 17, 18, 19, 20, 21, 22, 23, 25, 26, 27, 28, 29, 30, 31, 32, 34, 35, 36, 37, 38, 39];
-                document.body.setAttribute('data-interaction', activeSteps.includes(step));
 
                 if (typeof showSection === "function") {
                     if ([7, 8, 9, 10, 11, 12].includes(step)) showSection('threats');
