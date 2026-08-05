@@ -433,7 +433,7 @@
                     { element: 'img[src*="warnings.png"]', intro: "Click the Threats icon to go to the threats panel.", interaction: true }, // 5
                     { element: '.itemsBar', intro: "The threats panel is where we identify <strong>what could go wrong in the system</strong>. Threats are things that could go wrong both accidentally and in malicious attacks. <strong>Next</strong>, we will show how to add a threat to the diagram.", interaction: false }, // 6
                     { element: '#showSelectedAssets', intro: "First, we need to specify where in the system the threat could occur. Click 'Select Assets' to begin specifying where the threat occurs.", interaction: true }, // 7
-                    { element: '.dfd_assetview', intro: "Select the asset on the diagram...", interaction: false }, // 8
+                    { element: '.dfd_assetview', intro: "Select the asset on the diagram...", interaction: true }, // 8
                     { element: '#display_selected_for_threats', intro: "Click 'Done Selecting'.", interaction: true }, // 9
                     { element: '#threat_title', intro: "Enter a title that briefly summarizes the threat, then press Enter.", interaction: true }, // 10
                     { element: '#threats button[onclick="addThreat()"]', intro: "Click 'Add Threat' to add the threat to the diagram.", interaction: true }, // 11
@@ -441,7 +441,7 @@
                     { element: '#bottom_bar', intro: "Now select the element you just added a threat to. The threat will appear in 'Known threats', where we see all unmitigated threats.", interaction: true }, // 13
                     { element: 'img[src*="wrench.png"]', intro: "Next, we need to decide what to do about each threat. The protections we put in place to prevent threats from occurring are called <strong>controls</strong>. Click the Controls icon to see the controls panel.", interaction: true }, // 14
                     { element: '#showSelectedAssetsControls', intro: "Similar to threats, we need to select which assets the control applies to. Click 'Select Assets'.", interaction: true }, // 15
-                    { element: '.dfd_assetview', intro: "Select the asset on the diagram...", interaction: false }, // 16
+                    { element: '.dfd_assetview', intro: "Select the asset on the diagram...", interaction: true }, // 16
                     { element: '#display_selected_for_controls', intro: "Click 'Done Selecting'.", interaction: true }, // 17
                     { element: '#control_title', intro: "Enter a title for the control and then press Enter. (This is just an example, so it doesn't matter what you name it.)", interaction: true }, // 18
                     { element: '#controls button[onclick="addControl()"]', intro: "Click 'Add Control'.", interaction: true }, // 19
