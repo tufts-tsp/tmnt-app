@@ -404,9 +404,6 @@
     body.tutorial-active button[data-action] {
         pointer-events: auto !important;
         cursor: pointer !important;
-        display: inline-block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
     }
 
     /* Re-enable clicks for your Bootstrap modals/alerts */
@@ -541,6 +538,13 @@
 
             onboardingTour.onchange(function() {
                 const step = this.currentStep();
+                
+                // Set data-interaction for the CURRENT step
+                const activeSteps = [5, 7, 9, 10, 11, 12, 14, 15, 17, 18, 19, 20, 21, 22, 23, 25, 26, 27, 28, 29, 30, 31, 32, 34, 35, 36, 37, 38, 39];
+                const isInteractive = activeSteps.includes(step);
+                document.body.setAttribute('data-interaction', isInteractive);
+                console.log("OnChange - Step:", step, "Interaction:", isInteractive);
+
                 if (step === 8 || step === 16 || step === 21 || step === 33) {
                     svg.selectAll(".node_group").each(function(d) {
                             d3.select(this).selectAll(".asset")
@@ -580,12 +584,6 @@
             onboardingTour.onbeforechange(function() {
                 const step = this.currentStep();
                 const forward = onboardingTour._direction === 'forward';
-                const nextStep = forward ? step + 1 : step - 1;
-
-                // Set data-interaction for the NEXT step before it's displayed
-                const activeSteps = [5, 7, 9, 10, 11, 12, 14, 15, 17, 18, 19, 20, 21, 22, 23, 25, 26, 27, 28, 29, 30, 31, 32, 34, 35, 36, 37, 38, 39];
-                document.body.setAttribute('data-interaction', activeSteps.includes(nextStep));
-                console.log("BeforeChange - Current Step:", step, "Next Step:", nextStep, "Interaction:", activeSteps.includes(nextStep));
 
                 if (typeof svg !== 'undefined' && typeof d3 !== 'undefined') {
                     if (step >= 1 && step <= 4) {
