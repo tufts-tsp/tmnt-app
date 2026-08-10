@@ -479,6 +479,23 @@
             // Ensure the click-blocker is removed when the tutorial ends
             onboardingTour.oncomplete(function() {
                 document.body.classList.remove('tutorial-active');
+                // mark tutorial seen
+                $.ajax({
+                    type: "POST",
+                    url: "{% url 'mark_tutorial_seen' %}",
+                    headers: {
+                        "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    },
+                    data: {},
+                    dataType: "html",
+                    success: function(result){
+                        // Optionally handle success
+                        console.debug("Marked tutorial seen");
+                    },
+                    error: function(error) {
+                        console.error("Error marking tutorial seen ", error);
+                    }
+                });
             });
             onboardingTour.onexit(function() {
                 document.body.classList.remove('tutorial-active');
