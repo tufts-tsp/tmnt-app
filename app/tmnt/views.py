@@ -220,6 +220,7 @@ def workspace(request, project_name):
     # print('User:', request.user)
     project_name = get_object_or_404(Project, name=project_name, user=request.user)
     experiment_mode = project_name.experiment_mode
+    start_tour = not ParticipantUser.objects.get_or_create(user=request.user)[0].has_seen_tutorial
     return render(request, "tmnt/asset_viewer.html", locals())
 
 def add_entity(request):

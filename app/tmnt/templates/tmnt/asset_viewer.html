@@ -327,6 +327,7 @@
 // get project name from Django context
     const projectName = "{{ project_name|escapejs }}";
     const username = "{{ user.username|escapejs }}";
+    const startTour = "{{ start_tour|escapejs }}" === "True"; // Convert to boolean
     const experimentMode = "{{ experiment_mode|escapejs }}" === "True"; // Convert to boolean
     // Generating URLs for AJAX POST calls
     const addEntityUrl = "{%  url 'api/add_entity' %}"
@@ -686,7 +687,7 @@
                 }
             });
 
-            onboardingTour.start();
+            if(startTour) onboardingTour.start();
         }
     });
 </script>

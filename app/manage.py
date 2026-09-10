@@ -6,6 +6,11 @@ import sys
 
 def main():
     """Run administrative tasks."""
+    if sys.argv[1] == "runserver":
+        os.environ.setdefault("DB_PASSWORD", sys.argv[3])
+    elif sys.argv[1] == "makemigrations" or sys.argv[1] == "migrate":
+        os.environ.setdefault("DB_PASSWORD", sys.argv[2])
+    """if run, elif makemigrations, elif migrate, elif create_experiments"""
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tmnt.settings")
     try:
         from django.core.management import execute_from_command_line
