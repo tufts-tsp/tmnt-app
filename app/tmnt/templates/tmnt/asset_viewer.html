@@ -418,10 +418,25 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", function () {
-        if (localStorage.getItem('onboarding_step') === 'workspace_start') {
-            document.body.classList.add('tutorial-active');
+        document.body.classList.remove('tutorial-active');
+        document.body.removeAttribute('data-interaction');
+        document.body.removeAttribute('data-hide-next');
 
-            onboardingTour = introJs.tour();
+        const onboardingState = localStorage.getItem('onboarding_step');
+
+        if (!startTour) {
+            localStorage.setItem('onboarding_step', 'tutorial_seen');
+            return;
+        }
+
+        if (onboardingState === 'tutorial_seen') {
+            return;
+        }
+
+        localStorage.setItem('onboarding_step', 'workspace_start');
+        document.body.classList.add('tutorial-active');
+
+        onboardingTour = introJs.tour();
             window.onboardingTour = onboardingTour;
 
             onboardingTour.setOptions({
@@ -479,6 +494,7 @@
 
             // Ensure the click-blocker is removed when the tutorial ends
             onboardingTour.oncomplete(function() {
+                localStorage.setItem('onboarding_step', 'tutorial_seen');
                 document.body.classList.remove('tutorial-active');
                 // mark tutorial seen
                 $.ajax({
@@ -499,6 +515,7 @@
                 });
             });
             onboardingTour.onexit(function() {
+                localStorage.setItem('onboarding_step', 'tutorial_seen');
                 document.body.classList.remove('tutorial-active');
             });
 
@@ -662,7 +679,7 @@
 
                 if ((step === 9 || step === 17 || step === 22 || step === 34) && forward) {
                     const selected = nodes.filter(n => n.selected);
-                    if (selected.length != 1 || selected[0].id != nodes[0].id) {
+                    if (selected.length !== 1 || selected[0].id !== nodes[0].id) {
                         alert("Please select the correct asset on the diagram first!");
                         return false;
                     }
@@ -688,7 +705,6 @@
             });
 
             if(startTour) onboardingTour.start();
-        }
     });
 </script>
 {% endif %}
