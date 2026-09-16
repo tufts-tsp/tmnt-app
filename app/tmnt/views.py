@@ -87,18 +87,21 @@ def project_list(request):
 
 @login_required
 def submit_experiment(request):
+    redirect_url = 'https://tufts.qualtrics.com/jfe/form/SV_1OgC7ChGZa047Yi?cc='
     if request.user.is_authenticated:
+        redirect_url += request.user.username
         # Mark the user as inactive
         request.user.is_active = False
         request.user.save()
         # Optional: Add a message for feedback
         # messages.info(request, "You have been logged out and your account is now inactive.")
+    else:
+        redirect_url += 'unauthenticated'
 
     # Log the user out
     logout(request)
-    # Redirect to a desired page (e.g., the home page or a specific inactive page)
-    # TODO: replace url with Qualtrics survey when survey is live
-    return redirect('https://tufts.qualtrics.com/jfe/form/SV_1OgC7ChGZa047Yi?cc=' + request.user.username)
+    # Redirect to a Qualtrics survey with username parameter
+    return redirect(redirect_url)
 
 @login_required
 def create_project(request):
