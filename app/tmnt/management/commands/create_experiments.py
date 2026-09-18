@@ -6,7 +6,7 @@ class Command(BaseCommand):
     help = 'Create default experiments for testing purposes'
     def add_arguments(self, parser):
         parser.add_argument('--username', nargs='?', type=str, default='dummy')
-        parser.add_argument('--experiment_group', nargs='?', type=str, default=None)
+        parser.add_argument('--experiment_group', nargs='?', type=str, default='all')
 
     def handle(self, *args, **options):
         try:
@@ -31,6 +31,8 @@ class Command(BaseCommand):
             # create projects for default experiments
             if Project.objects.filter(name='Surgical Robot', user=dummy_user).exists():
                 self.stdout.write('Project "Surgical Robot Experiment" exists. Skipping creation.')
+            elif options['experiment_group'] != '1' and options['experiment_group'] != 'all':
+                self.stdout.write('Skipping creation of Surgical Robot Experiment for this experiment group.')
             else:
                 surgical_robot_project = Project.objects.create(
                     name='Surgical Robot',
@@ -78,6 +80,8 @@ class Command(BaseCommand):
                 df.save()  # end of surgical robot dataflows
             if Project.objects.filter(name='Insulin Pump', user=dummy_user).exists():
                 self.stdout.write('Project "Insulin Pump Experiment" exists. Skipping creation.')
+            elif options['experiment_group'] != '2' and options['experiment_group'] != 'all':
+                self.stdout.write('Skipping creation of Insulin Pump Experiment for this experiment group.')
             else:
                 insulin_pump_project = Project.objects.create(
                     name='Insulin Pump',
@@ -135,6 +139,8 @@ class Command(BaseCommand):
                 df.save()  # end of insulin pump dataflows
             if Project.objects.filter(name='AI Chatbot', user=dummy_user).exists():
                 self.stdout.write('Project "AI Chatbot Experiment" exists. Skipping creation.')
+            elif options['experiment_group'] != '3' and options['experiment_group'] != 'all':
+                self.stdout.write('Skipping creation of AI Chatbot Experiment for this experiment group.')
             else:
                 ai_chatbot_project = Project.objects.create(
                     name='AI Chatbot',
@@ -187,6 +193,8 @@ class Command(BaseCommand):
                 # end of AI chatbot dataflows
             if Project.objects.filter(name='DNA Sequencer', user=dummy_user).exists():
                 self.stdout.write('Project "DNA Sequencer Experiment" exists. Skipping creation.')
+            elif options['experiment_group'] != '4' and options['experiment_group'] != 'all':
+                self.stdout.write('Skipping creation of DNA Sequencer Experiment for this experiment group.')
             else:
                 dna_sequencer_project = Project.objects.create(
                     name='DNA Sequencer',
