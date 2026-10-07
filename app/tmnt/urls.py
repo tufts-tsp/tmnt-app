@@ -2,7 +2,7 @@ from django.urls import path, include
 from django.contrib import admin
 
 from . import views
-from .views import SignUpView
+# from .views import SignUpView
 
 urlpatterns = [
     path("tmnt/<str:project_name>", views.workspace, name="workspace"),
