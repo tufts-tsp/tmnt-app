@@ -6,6 +6,7 @@ class ParticipantUser(models.Model):
     is_participant = models.BooleanField(default=True)
     experiment_group = models.CharField(max_length=100, blank=True, null=True)
     has_seen_tutorial = models.BooleanField(default=False)
+    tutorial_step = models.IntegerField(default=0)
     def __str__(self):
         return f"Profile for {self.user.username}"
 
