@@ -25,7 +25,7 @@ EXPOSE 8086
 # 2) commit to build a new container
 # 3) pull container to server
 # 4) run the container with "bash" at end, make your migrations in the bash terminal, then exit the container and uncomment the entrypoint and cmd below for normal operation
-#ENTRYPOINT ["python", "manage.py"]
-#CMD ["runserver", "0.0.0.0:8086"]
+ENTRYPOINT ["python", "manage.py"]
+CMD ["runserver", "0.0.0.0:8086"]
 # only for gunicorn below!
 #CMD ["gunicorn", "--bind", "0.0.0.0:8086", "tmnt.wsgi:application"]
