@@ -328,6 +328,7 @@
     const projectName = "{{ project_name|escapejs }}";
     const username = "{{ user.username|escapejs }}";
     let startTour = "{{ start_tour|escapejs }}" === "True"; // Convert to boolean
+    let tutorialStep = parseInt("{{ tutorial_step|escapejs }}");
     const experimentMode = "{{ experiment_mode|escapejs }}" === "True"; // Convert to boolean
     // Generating URLs for AJAX POST calls
     const addEntityUrl = "{%  url 'api/add_entity' %}"
@@ -424,10 +425,10 @@
 
         const onboardingState = localStorage.getItem('onboarding_step');
 
-        if (!startTour) {
-            localStorage.setItem('onboarding_step', 'tutorial_seen');
-            return;
-        }
+        {#if (!startTour) {#}
+        {#    localStorage.setItem('onboarding_step', 'tutorial_seen');#}
+        {#    return;#}
+        {# }#}
 
         if (onboardingState === 'tutorial_seen') {
             return;
@@ -580,6 +581,51 @@
                 document.body.setAttribute('data-interaction', isInteractive);
                 console.log("OnChange - Step:", step, "Interaction:", isInteractive);
 
+                if (step >= 1 && step <= 4 && typeof svg !== 'undefined' && typeof d3 !== 'undefined') {
+                    svg.selectAll(".node_group").each(function(d) {
+                        d3.select(this).selectAll(".asset")
+                            .style("stroke", "black")
+                            .style("stroke-width", "1");
+                    });
+                    d3.selectAll(".link")
+                        .style("stroke", "black")
+                        .attr("marker-end", "url(#arrow)");
+                    for (let node of nodes) {
+                        node.selected = false;
+                    }
+                    resetBottomBar();
+
+                    if (step === 1) {
+                        svg.selectAll(".node_group")
+                            .filter(d => d && d.asset_type === 'Actor')
+                            .filter((d, i) => i === 0)
+                            .each(function(d) {
+                                d3.select(this).dispatch('click');
+                            });
+                    } else if (step === 2) {
+                        svg.selectAll(".node_group")
+                            .filter((d, i) => i === 0)
+                            .each(function(d) {
+                                d3.select(this).dispatch('click');
+                            });
+                    } else if (step === 3) {
+                        svg.selectAll(".node_group")
+                            .filter(d => d && d.asset_type === 'Data Store')
+                            .filter((d, i) => i === 0)
+                            .each(function(d) {
+                                d3.select(this).dispatch('click');
+                            });
+                    } else if (step === 4) {
+                        d3.selectAll(".link")
+                            .filter((d, i) => i === 0)
+                            .each(function(d) {
+                                if (typeof viewDataflow === 'function') {
+                                    viewDataflow(d);
+                                }
+                            });
+                    }
+                }
+
                 if (step === 8 || step === 16 || step === 21 || step === 33) {
                     svg.selectAll(".node_group").each(function(d) {
                             d3.select(this).selectAll(".asset")
@@ -620,63 +666,6 @@
                 const step = this.currentStep();
                 const forward = onboardingTour._direction === 'forward';
 
-                if (typeof svg !== 'undefined' && typeof d3 !== 'undefined') {
-                    if (step >= 1 && step <= 4) {
-                        // Removes highlights from the previous step before applying new ones
-                        svg.selectAll(".node_group").each(function(d) {
-                            d3.select(this).selectAll(".asset")
-                                .style("stroke", "black")
-                                .style("stroke-width", "1");
-                        });
-                        d3.selectAll(".link")
-                            .style("stroke", "black")
-                            .attr("marker-end", "url(#arrow)");
-                        for (let node of nodes) {
-                            node.selected = false;
-                        }
-                        resetBottomBar();
-                    }
-
-                    if (step === 1) {
-                        svg.selectAll(".node_group")
-                            .filter(d => d && d.asset_type === 'Actor')
-                            .filter((d, i) => i === 0)
-                            .each(function(d) {
-                                // Simulate a user click to populate the bottom bar
-                                d3.select(this).dispatch('click');
-                            });
-                    }
-
-                    if (step === 2) {
-                        svg.selectAll(".node_group")
-                            .filter((d, i) => i === 0)
-                            .each(function(d) {
-                                // Simulate a user click to populate the bottom bar
-                                d3.select(this).dispatch('click');
-                            });
-                    }
-
-                    if (step === 3) {
-                        svg.selectAll(".node_group")
-                            .filter(d => d && d.asset_type === 'Data Store')
-                            .filter((d, i) => i === 0)
-                            .each(function(d) {
-                                // Simulate a user click to populate the bottom bar
-                                d3.select(this).dispatch('click');
-                            });
-                    }
-
-                    if (step === 4) {
-                        d3.selectAll(".link")
-                            .filter((d, i) => i === 0)
-                            .each(function(d) {
-                                if (typeof viewDataflow === 'function') {
-                                    viewDataflow(d);
-                                }
-                            });
-                    }
-                }
-
                 if ((step === 9 || step === 17 || step === 22 || step === 34) && forward) {
                     const selected = nodes.filter(n => n.selected);
                     if (selected.length !== 1 || selected[0].id !== nodes[0].id) {
@@ -704,7 +693,8 @@
                 }
             });
 
-            if(startTour) onboardingTour.start();
+            {#if(startTour) onboardingTour.start();#}
+        onboardingTour.start();
     });
 </script>
 {% endif %}

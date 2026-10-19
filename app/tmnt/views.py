@@ -57,7 +57,7 @@ def mark_tutorial_seen(request):
 @require_POST
 def reset_tutorial(request):
     profile, _ = ParticipantUser.objects.get_or_create(user=request.user)
-    profile.has_seen_tutorial = False
+    profile.tutorial_step = 0
     profile.save()
     return JsonResponse({"status": "ok"})
 
@@ -128,6 +128,7 @@ def create_project(request):
         return render(request, "tmnt/new_project.html", {"form": form})
 
 @login_required
+@require_POST
 def delete_project(request, project_name):
     project = get_object_or_404(Project, name=project_name, user=request.user)
     if project.experiment_mode:
@@ -219,11 +220,14 @@ def upload_file(request):
     return render(request, "tmnt/dfd_viewer.html", {"fileform": fileform})
 
 
+@login_required
+@require_POST
 def workspace(request, project_name):
     # print('User:', request.user)
     project_name = get_object_or_404(Project, name=project_name, user=request.user)
     experiment_mode = project_name.experiment_mode
     start_tour = not ParticipantUser.objects.get_or_create(user=request.user)[0].has_seen_tutorial
+    tour_step = ParticipantUser.objects.get_or_create(user=request.user)[0].tutorial_step
     return render(request, "tmnt/asset_viewer.html", locals())
 
 def add_entity(request):
