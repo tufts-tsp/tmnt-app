@@ -221,7 +221,7 @@ def upload_file(request):
 
 
 @login_required
-@require_POST
+# @require_POST
 def workspace(request, project_name):
     # print('User:', request.user)
     project_name = get_object_or_404(Project, name=project_name, user=request.user)
