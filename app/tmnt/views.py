@@ -55,6 +55,19 @@ def mark_tutorial_seen(request):
 
 @login_required
 @require_POST
+def set_tutorial_step(request):
+    try:
+        step = int(request.POST["step"])
+    except (KeyError, ValueError):
+        return JsonResponse({"error": "A valid tutorial step is required."}, status=400)
+
+    profile, _ = ParticipantUser.objects.get_or_create(user=request.user)
+    profile.tutorial_step = step
+    profile.save(update_fields=["tutorial_step"])
+    return JsonResponse({"status": "ok"})
+
+@login_required
+@require_POST
 def reset_tutorial(request):
     profile, _ = ParticipantUser.objects.get_or_create(user=request.user)
     profile.tutorial_step = 0
