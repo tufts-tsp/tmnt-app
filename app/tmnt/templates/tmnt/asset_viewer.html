@@ -683,7 +683,7 @@
                 const step = this.currentStep();
                 const forward = onboardingTour._direction === 'forward';
 
-                if ((step === 9 || step === 17 || step === 22 || step === 35) && forward) {
+                if ((step === 8 || step === 9 || step === 17 || step === 22 || step === 35) && forward) {
                     const selected = nodes.filter(n => n.selected);
                     if (selected.length !== 1 || selected[0].id !== nodes[0].id) {
                         alert("Please select the correct asset on the diagram first!");
