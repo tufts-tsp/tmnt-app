@@ -1155,7 +1155,7 @@ function clicked(e) {
     let already_selected = selected_node.selected;
     const step = window.onboardingTour ? window.onboardingTour.currentStep() : -1;
 
-    if (step === 8 && (!nodes[0] || selected_node.id !== nodes[0].id)) {
+    if ((step === 8 || step === 27) && (!nodes[0] || selected_node.id !== nodes[0].id)) {
         alert("Please select the correct asset on the diagram first!");
         return;
     }
@@ -1192,6 +1192,8 @@ function clicked(e) {
     }
 
     if ([8, 16, 21, 33].includes(step)) {
+        window.triggerTourNext();
+    } else if (step === 27) {
         window.triggerTourNext();
     }
 
@@ -1375,14 +1377,6 @@ function clicked(e) {
 
     // create the options button for the asset
     createAssetOptions();
-
-    if (step === 27) {
-        if (!nodes[0] || selected_node.id !== nodes[0].id) {
-            alert("Please select the correct asset on the diagram first!");
-        } else {
-            window.triggerTourNext();
-        }
-    }
 
     if (window.onboardingTour && window.onboardingTour.currentStep() === 8) {
         const selectedCount = nodes.filter(n => n.selected).length;
