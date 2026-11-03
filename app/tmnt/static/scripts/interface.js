@@ -1154,8 +1154,10 @@ function clicked(e) {
     let selected_node = d3.select(this).data()[0]
     let already_selected = selected_node.selected;
     const step = window.onboardingTour ? window.onboardingTour.currentStep() : -1;
+    const activeStepText = document.querySelector(".introjs-tooltiptext")?.textContent.trim();
+    const selectingControlAsset = activeStepText === "Select the asset on the diagram";
 
-    if ((step === 8 || step === 27) && (!nodes[0] || selected_node.id !== nodes[0].id)) {
+    if ((step === 8 || selectingControlAsset) && (!nodes[0] || selected_node.id !== nodes[0].id)) {
         alert("Please select the correct asset on the diagram first!");
         return;
     }
@@ -1179,10 +1181,10 @@ function clicked(e) {
         
     // Reselect the clicked on node
     // if a selected node is clicked again, it will be unselected
-    selected_node.selected = !already_selected;
+    selected_node.selected = selectingControlAsset ? true : !already_selected;
 
     // Unselect if already clicked
-    if (already_selected) {
+    if (already_selected && !selectingControlAsset) {
         // reset the stroke and width of the node to show it is unselected
         d3.select(this).selectAll(".asset")
             .style("stroke", "black")
@@ -1193,7 +1195,7 @@ function clicked(e) {
 
     if ([8, 16, 21, 33].includes(step)) {
         window.triggerTourNext();
-    } else if (step === 27) {
+    } else if (selectingControlAsset) {
         window.triggerTourNext();
     }
 
