@@ -1186,7 +1186,7 @@ function clicked(e) {
     }
 
     const step = window.onboardingTour ? window.onboardingTour.currentStep() : -1;
-    if (step === 8 || step === 16 || step === 21 || step === 33) {
+    if (step === 8 || step === 16 || step === 21 || step === 27 || step === 33) {
         window.triggerTourNext();
     }
 
@@ -1705,10 +1705,6 @@ function displayThreat(node, status, threat) {
 // Displays control information and allows users to either make changes to 
 // the control
 function displayControl(node, status, control) {
-    let step = window.onboardingTour ? window.onboardingTour.currentStep() : -1;
-    if (step === 27) {
-        window.triggerTourNext();
-    }
     var bottom_bar = document.getElementById("bottom_bar");
     bottom_bar.innerHTML = "<h2>" + control.control_title + "</h2>" + node.asset_name + " | " + control.control_status + " Control<br>";
     if (control.control_description !== "") {
