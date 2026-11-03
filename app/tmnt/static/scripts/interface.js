@@ -1153,6 +1153,12 @@ function dragged(e) {
 function clicked(e) {
     let selected_node = d3.select(this).data()[0]
     let already_selected = selected_node.selected;
+    const step = window.onboardingTour ? window.onboardingTour.currentStep() : -1;
+
+    if (step === 8 && (!nodes[0] || selected_node.id !== nodes[0].id)) {
+        alert("Please select the correct asset on the diagram first!");
+        return;
+    }
 
     // If multiselect is enabled, allow multiple nodes to be selected
     if (!multiselect) {
@@ -1185,7 +1191,6 @@ function clicked(e) {
         return;
     }
 
-    const step = window.onboardingTour ? window.onboardingTour.currentStep() : -1;
     if ([8, 16, 21, 33].includes(step)) {
         window.triggerTourNext();
     }
@@ -4501,4 +4506,3 @@ function saveFinding() {
 //        as complete
 //    Black - Finding is marked as complete
 //    Grey - Finding is marked as not relevant
-
