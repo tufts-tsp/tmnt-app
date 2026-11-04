@@ -306,6 +306,9 @@ function showModal(title, message, options = {}) {
         // Progress onboarding tour steps if applicable
         const step = window.onboardingTour ? window.onboardingTour.currentStep() : -1;
         if (step === 12 || step === 20 || step === 26 || step === 29 || step === 39) {
+            if (step === 12) {
+                svg.dispatch('click');
+            }
             window.triggerTourNext();
         }
         
