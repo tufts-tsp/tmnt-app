@@ -124,6 +124,9 @@
                     <option value="Denial of Service">Denial of Service</option>
                     <option value="Elevation of Privilege">Elevation of Privilege</option>
                 </select>
+                <button type="button" class="btn btn-link p-0 ms-1" data-bs-toggle="modal" data-bs-target="#strideInfoModal" aria-label="Open STRIDE notes" title="Add STRIDE notes">
+                    <i class="bi bi-info-circle" aria-hidden="true"></i>
+                </button>
                 <br>
                 <label for="severity">Severity:</label>
                 <select name="severity" id="severity" class="dropdown" title="Select severity">
@@ -142,6 +145,24 @@
 {#                </select>#}
 {#                <div id="display_suggested_threat"></div>#}
 {#            </div>#}
+        </div>
+
+        <div class="modal fade" id="strideInfoModal" tabindex="-1" aria-labelledby="strideInfoModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="strideInfoModalLabel">STRIDE Notes</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <label for="strideInfoText" class="form-label">Add notes for this STRIDE category:</label>
+                        <textarea id="strideInfoText" class="form-control" rows="5"></textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Done</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Panel for adding controls -->
